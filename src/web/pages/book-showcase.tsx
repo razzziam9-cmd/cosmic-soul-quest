@@ -96,7 +96,7 @@ const BookShowcase = () => {
                     Book One
                   </p>
                   <p className="font-['Rajdhani'] text-cyan-300/60 text-xs uppercase tracking-widest mt-1">
-                    The Awakening
+                    Discovery
                   </p>
                   
                   {/* Decorative bottom symbols */}
