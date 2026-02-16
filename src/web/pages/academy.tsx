@@ -76,10 +76,10 @@ const PricingTier = ({ name, price, period, features, highlighted = false, badge
       {/* CTA Button */}
       <button className={`w-full py-4 rounded-xl font-['Orbitron'] text-base font-bold uppercase tracking-wider transition-all duration-300 ${
         highlighted 
-          ? 'bg-[#00ff88] text-[#050510] hover:bg-[#00ffaa] hover:scale-[1.02]' 
-          : 'border-2 border-purple-500/50 text-purple-300 hover:border-purple-500 hover:bg-purple-500/10'
+          ? 'bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white hover:scale-[1.02]' 
+          : 'border-2 border-white/30 text-white/80 hover:border-white/50 hover:bg-white/5'
       }`}>
-        {highlighted ? 'Join Now' : 'Choose Plan'}
+        {highlighted ? '👆 Tap to Join' : '👆 Tap to Select'}
       </button>
     </div>
   );
@@ -220,9 +220,24 @@ const AcademySection = () => {
           <p className="font-['Rajdhani'] text-zinc-400 mb-6">
             Not sure which path is right for you?
           </p>
-          <button className="px-8 py-4 font-['Orbitron'] text-base font-medium text-amber-300 border-2 border-amber-500/50 rounded-xl transition-all duration-300 hover:border-amber-500 hover:bg-amber-500/10 uppercase tracking-wider">
-            Take the Soul Assessment
+          <button className="px-8 py-4 font-['Orbitron'] text-base font-medium text-white/80 border-2 border-white/30 rounded-xl transition-all duration-300 hover:border-white/50 hover:bg-white/5 uppercase tracking-wider">
+            👆 Tap for Soul Assessment
           </button>
+          
+          {/* Instagram Share Button */}
+          <div className="mt-6">
+            <a
+              href="https://instagram.com/Cosmic_soul_quest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#833AB4]/20 to-[#FD1D1D]/20 border border-[#FD1D1D]/30 text-white/80 font-['Rajdhani'] text-sm hover:border-[#FD1D1D]/60 transition-all hover:scale-105"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
+              </svg>
+              Share Academy to Story 🎓
+            </a>
+          </div>
         </div>
       </div>
     </section>

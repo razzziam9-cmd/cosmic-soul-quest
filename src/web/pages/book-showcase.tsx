@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const FloatingParticles = () => {
   return (
@@ -31,6 +31,64 @@ const SacredGeometry = () => {
       {/* Inner geometric shapes */}
       <div className="absolute w-[200px] h-[200px] border border-purple-400/30 rotate-45 animate-[spin_20s_linear_infinite_reverse]" />
     </div>
+  );
+};
+
+// Instagram Share Button Component
+const InstagramShareButton = ({ content, variant = "default" }: { content: string; variant?: "default" | "story" }) => {
+  const [shared, setShared] = useState(false);
+  
+  const handleShare = () => {
+    // Show visual feedback
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+    
+    // Copy share text to clipboard for easy Instagram sharing
+    const shareText = `${content}\n\n🔮 @Cosmic_soul_quest`;
+    navigator.clipboard.writeText(shareText);
+    
+    // Open Instagram (this works on mobile, on desktop it opens web)
+    window.open('https://instagram.com/Cosmic_soul_quest', '_blank');
+  };
+  
+  if (variant === "story") {
+    return (
+      <button
+        onClick={handleShare}
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all duration-300 ${
+          shared 
+            ? 'bg-[#00ff88]/20 text-[#00ff88] scale-105' 
+            : 'bg-gradient-to-r from-[#833AB4]/20 via-[#FD1D1D]/20 to-[#F77737]/20 text-white/80 hover:text-white hover:from-[#833AB4]/30 hover:via-[#FD1D1D]/30 hover:to-[#F77737]/30'
+        } border border-white/10`}
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
+          <circle cx="12" cy="12" r="3.5"/>
+          <circle cx="18.5" cy="5.5" r="1.5"/>
+        </svg>
+        <span className="font-['Rajdhani'] text-sm font-medium">
+          {shared ? '✓ Copied!' : 'Share to Story'}
+        </span>
+      </button>
+    );
+  }
+  
+  return (
+    <button
+      onClick={handleShare}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 ${
+        shared 
+          ? 'bg-[#00ff88]/20 text-[#00ff88]' 
+          : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+      }`}
+    >
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+      </svg>
+      <span className="font-['Rajdhani'] text-xs font-medium">
+        {shared ? 'Copied!' : 'Share'}
+      </span>
+    </button>
   );
 };
 
@@ -166,13 +224,18 @@ const BookShowcase = () => {
             {/* Pricing & CTA */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                <button className="relative px-8 py-4 font-['Orbitron'] text-base font-bold text-[#050510] bg-[#00ff88] rounded-xl transition-all duration-300 hover:scale-105 hover:bg-[#00ffaa] uppercase tracking-wider overflow-hidden group">
-                  <span className="relative z-10">Get Book Now</span>
-                  <div className="absolute inset-0 bg-[#00ff88] blur-lg opacity-50 group-hover:opacity-70 transition-opacity" />
+                <button className="relative px-8 py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] rounded-xl transition-all duration-300 hover:scale-105 uppercase tracking-wider overflow-hidden group">
+                  <span className="relative z-10 flex items-center gap-2">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 19V5M5 12l7-7 7 7"/>
+                    </svg>
+                    Swipe Up for Book
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] blur-lg opacity-50 group-hover:opacity-70 transition-opacity" />
                 </button>
                 
-                <button className="px-8 py-4 font-['Orbitron'] text-base font-medium text-[#00ff88] border-2 border-[#00ff88]/50 rounded-xl transition-all duration-300 hover:border-[#00ff88] hover:bg-[#00ff88]/10 uppercase tracking-wider">
-                  Read Sample
+                <button className="px-8 py-4 font-['Orbitron'] text-base font-medium text-white/80 border-2 border-white/30 rounded-xl transition-all duration-300 hover:border-white/60 hover:bg-white/5 uppercase tracking-wider">
+                  👆 Tap for Sample
                 </button>
               </div>
               
@@ -189,6 +252,20 @@ const BookShowcase = () => {
                 <span className="text-zinc-400">
                   <span className="text-cyan-300">$39.99</span> Collector
                 </span>
+              </div>
+              
+              {/* Instagram Share Section */}
+              <div className="pt-4 border-t border-white/10 mt-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
+                  <span className="font-['Rajdhani'] text-zinc-500 text-sm">Share this:</span>
+                  <InstagramShareButton 
+                    content="📚 Cosmic Soul Quest - A journey beyond the simulation. Seven cosmic warriors must reunite to save Earth's frequency. ✨ Are you one of them?"
+                    variant="story"
+                  />
+                  <InstagramShareButton 
+                    content="📚 I just discovered Cosmic Soul Quest and my mind is blown 🤯 Check it out!"
+                  />
+                </div>
               </div>
             </div>
           </div>

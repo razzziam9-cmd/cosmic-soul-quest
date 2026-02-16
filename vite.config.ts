@@ -6,13 +6,13 @@ import path from "path";
 import runableWebsiteRuntime from "runable-website-runtime"
 
 export default defineConfig({
-	plugins: [react(), runableWebsiteRuntime(), cloudflare(), tailwind()],
-	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src/web"),
-		},
-	},
-	server: {
-		allowedHosts: true,
-	}
+        plugins: [react(), runableWebsiteRuntime(), cloudflare(), tailwind()],
+        resolve: {
+                alias: {
+                        "@": path.resolve(__dirname, "./src/web"),
+                },
+        },
+        server: {
+                allowedHosts: true,
+        }
 });

@@ -82,9 +82,9 @@ const EncryptedSignup = () => {
       
       <button
         type="submit"
-        className="w-full py-4 font-['Orbitron'] text-base font-bold text-[#050510] bg-[#00ff88] rounded-xl transition-all duration-300 hover:bg-[#00ffaa] hover:scale-[1.02] uppercase tracking-wider"
+        className="w-full py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider"
       >
-        Establish Secure Link
+        👆 Tap to Connect
       </button>
       
       <p className="font-['Rajdhani'] text-zinc-500 text-xs text-center">
@@ -195,9 +195,12 @@ const FrequencyLinkForm = () => {
       
       <button
         type="submit"
-        className="w-full py-4 font-['Orbitron'] text-base font-bold text-[#050510] bg-gradient-to-r from-[#00ff88] to-cyan-400 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider"
+        className="w-full py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider flex items-center justify-center gap-2"
       >
-        ⚡ Transmit Message ⚡
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+        Swipe Up to Send
       </button>
     </form>
   );
