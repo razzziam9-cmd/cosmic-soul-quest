@@ -1,1 +1,15 @@
-{"id":"3m20a6cfwzaef6xhril22zv96z34r9kt","name":"My Website","description":"A website built with Runable","url":"https://example.com","ogImage":"/og-image.png","favicon":"/vite.svg","twitter":{"card":"summary_large_image","site":"@runable"},"themeColor":"#000000","previewPort":7529,"previewUrl":"https://7529-ij28r71dye2t8l3hijmxb.e2b.app"}
+{
+  "id": "3m20a6cfwzaef6xhril22zv96z34r9kt",
+  "name": "Echoes of Aether",
+  "description": "A sacred space for seekers and star seeds, to awaken higher consciousness, align with their divine path, and grow through cosmic wisdom, healing, and community.",
+  "url": "https://example.com",
+  "ogImage": "/og-image.png",
+  "favicon": "/vite.svg",
+  "twitter": {
+    "card": "summary_large_image",
+    "site": "@runable"
+  },
+  "themeColor": "#000000",
+  "previewPort": 7529,
+  "previewUrl": "https://7529-ij28r71dye2t8l3hijmxb.e2b.app"
+}

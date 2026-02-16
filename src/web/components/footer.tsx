@@ -263,7 +263,7 @@ const Footer = () => {
               CONNECT ACROSS DIMENSIONS
             </span>
             <div className="flex gap-3">
-              <SocialIcon platform="instagram" href="https://instagram.com" />
+              <SocialIcon platform="instagram" href="https://instagram.com/Cosmic_soul_quest" />
               <SocialIcon platform="tiktok" href="https://tiktok.com" />
               <SocialIcon platform="youtube" href="https://youtube.com" />
               <SocialIcon platform="facebook" href="https://facebook.com" />
