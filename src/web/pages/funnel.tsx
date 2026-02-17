@@ -1,13 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 // Step 1: Secret Code Entry
 const SecretCodeEntry = ({ onComplete }: { onComplete: () => void }) => {
   const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [verified, setVerified] = useState(false);
-  const [error, setError] = useState(false);
-  
-  const secretCode = "777333"; // The "correct" code
   
   const handleKeyPress = (digit: string) => {
     if (activeIndex >= 6 || verified) return;
@@ -19,15 +16,9 @@ const SecretCodeEntry = ({ onComplete }: { onComplete: () => void }) => {
     
     // Check if complete
     if (activeIndex === 5) {
-      const enteredCode = [...newCode.slice(0, 5), digit].join("");
-      if (enteredCode === secretCode) {
-        setVerified(true);
-        setTimeout(onComplete, 1500);
-      } else {
-        // Auto-accept any code for demo purposes
-        setVerified(true);
-        setTimeout(onComplete, 1500);
-      }
+      // Auto-accept any code for demo purposes
+      setVerified(true);
+      setTimeout(onComplete, 1500);
     }
   };
   
@@ -37,7 +28,6 @@ const SecretCodeEntry = ({ onComplete }: { onComplete: () => void }) => {
       newCode[activeIndex - 1] = "";
       setCode(newCode);
       setActiveIndex(prev => prev - 1);
-      setError(false);
     }
   };
   
@@ -225,7 +215,6 @@ const SoulRecognition = ({ onComplete }: { onComplete: (archetype: string) => vo
 // Step 3: Frequency Match (Archetype Reveal)
 const FrequencyMatch = ({ archetype, onComplete }: { archetype: string; onComplete: () => void }) => {
   const [revealed, setRevealed] = useState(false);
-  const [showStoryPreview, setShowStoryPreview] = useState(false);
   
   useEffect(() => {
     setTimeout(() => setRevealed(true), 500);
@@ -255,76 +244,6 @@ const FrequencyMatch = ({ archetype, onComplete }: { archetype: string; onComple
   };
   
   const data = archetypeData[archetype] || archetypeData["Cosmic Warrior"];
-  
-  // Instagram Story Preview Modal
-  if (showStoryPreview) {
-    return (
-      <div className="min-h-[500px] flex flex-col items-center justify-center p-4">
-        {/* Story-sized preview card for screenshot */}
-        <div 
-          className="relative w-full max-w-[280px] aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-b from-[#0a0a1f] via-[#1a0a2e] to-[#0a0a1f]"
-          style={{ boxShadow: "0 0 50px rgba(131, 58, 180, 0.4)" }}
-        >
-          {/* Background decoration */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(131,58,180,0.3)_0%,transparent_70%)]" />
-          
-          {/* Content */}
-          <div className="relative h-full flex flex-col items-center justify-center p-6 text-center">
-            {/* Top branding */}
-            <div className="absolute top-6 left-0 right-0 flex justify-center">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm border border-white/10">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/>
-                </svg>
-                <span className="font-['Rajdhani'] text-white text-xs">@Cosmic_soul_quest</span>
-              </div>
-            </div>
-            
-            {/* Main content */}
-            <div className="mt-8">
-              <div className={`text-7xl mb-4 bg-gradient-to-br ${data.color} bg-clip-text text-transparent`}>
-                {data.symbol}
-              </div>
-              <p className="font-['Orbitron'] text-[#00ff88] text-xs tracking-[0.2em] mb-2">
-                MY COSMIC SOUL TYPE IS
-              </p>
-              <h2 className={`font-['Cinzel'] text-2xl font-bold bg-gradient-to-r ${data.color} bg-clip-text text-transparent mb-3`}>
-                {archetype}
-              </h2>
-              <p className="font-['Rajdhani'] text-white/70 text-xs leading-relaxed px-2">
-                {data.desc}
-              </p>
-            </div>
-            
-            {/* Bottom CTA */}
-            <div className="absolute bottom-8 left-0 right-0 px-6">
-              <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737]">
-                <span className="font-['Orbitron'] text-white text-xs font-bold">FIND YOURS</span>
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 19V5M5 12l7-7 7 7"/>
-                </svg>
-              </div>
-              <p className="font-['Rajdhani'] text-white/40 text-[10px] mt-2 text-center">
-                cosmicsoulquest.com
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-6 space-y-3 text-center">
-          <p className="font-['Rajdhani'] text-zinc-400 text-sm">
-            📱 Screenshot this and share to your story!
-          </p>
-          <button
-            onClick={() => setShowStoryPreview(false)}
-            className="px-6 py-3 font-['Orbitron'] text-sm font-bold text-white/80 border border-white/30 rounded-xl hover:bg-white/5 transition-all"
-          >
-            ← Back to Results
-          </button>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className="min-h-[500px] flex flex-col items-center justify-center p-6 text-center">
@@ -367,34 +286,14 @@ const FrequencyMatch = ({ archetype, onComplete }: { archetype: string; onComple
         
         <button
           onClick={onComplete}
-          className="px-8 py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] rounded-xl transition-all duration-300 hover:scale-105 uppercase tracking-wider"
+          className="px-8 py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-105 uppercase tracking-wider"
         >
-          👆 Tap to Continue
+          <span className="flex items-center gap-2">
+            <span>⚡</span>
+            Continue to Awakening
+            <span>⚡</span>
+          </span>
         </button>
-        
-        {/* Instagram Share Buttons */}
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={() => setShowStoryPreview(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white font-['Rajdhani'] text-sm font-semibold hover:scale-105 transition-all"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-            </svg>
-            Download for Instagram
-          </button>
-          <a
-            href="https://instagram.com/Cosmic_soul_quest"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 text-white/80 font-['Rajdhani'] text-sm hover:border-white/40 transition-all"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/>
-            </svg>
-            Share Result
-          </a>
-        </div>
       </div>
     </div>
   );
@@ -492,11 +391,10 @@ const AwakeningOffer = () => {
       </div>
       
       {/* CTA */}
-      <button className="w-full max-w-md py-5 font-['Orbitron'] text-lg font-bold text-white bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider relative overflow-hidden group flex items-center justify-center gap-3">
-        <svg className="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M12 19V5M5 12l7-7 7 7"/>
-        </svg>
-        <span className="relative z-10">SWIPE UP TO CLAIM</span>
+      <button className="w-full max-w-md py-5 font-['Orbitron'] text-lg font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider relative overflow-hidden group flex items-center justify-center gap-3">
+        <span className="text-lg">⚡</span>
+        <span className="relative z-10">CLAIM YOUR AWAKENING</span>
+        <span className="text-lg">⚡</span>
         <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
       </button>
       
