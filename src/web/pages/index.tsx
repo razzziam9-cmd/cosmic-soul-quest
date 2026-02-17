@@ -1,5 +1,119 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// Audio context for subtle sound effects
+let audioContext: AudioContext | null = null;
+
+const playTapSound = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch {
+    // Audio not supported, fail silently
+  }
+};
+
+const playSuccessSound = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch {
+    // Audio not supported, fail silently
+  }
+};
+
+// iMessage-like notification sound (subtle pop)
+const playMessageSound = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Short pop sound like iMessage
+    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.05);
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.08);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.08);
+  } catch {
+    // Audio not supported, fail silently
+  }
+};
+
+// Haptic feedback helper with pattern support
+const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') => {
+  if ('vibrate' in navigator) {
+    const patterns: Record<string, number | number[]> = {
+      light: 8,
+      medium: 20,
+      heavy: 40,
+      success: [10, 30, 10], // double tap feel
+      error: [50, 30, 50] // warning pattern
+    };
+    navigator.vibrate(patterns[intensity]);
+  }
+};
+
+// Touch-optimized wrapper for consistent touch behavior
+const useTouchFeedback = () => {
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.currentTarget.classList.add('touch-active');
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.currentTarget.classList.remove('touch-active');
+  };
+  
+  return { 
+    onTouchStart: handleTouchStart, 
+    onTouchEnd: handleTouchEnd,
+    onTouchCancel: handleTouchEnd
+  };
+};
+
 // Checkout helper function - calls API to get Stripe checkout URL
 const initiateCheckout = async (productId: string): Promise<string | null> => {
   try {
@@ -115,18 +229,40 @@ const ProgressBars = ({ currentSlide, totalSlides, isAnimating }: { currentSlide
   );
 };
 
-// Tap zones for navigation
+// Tap zones for navigation with instant visual feedback
 const TapZones = ({ onPrev, onNext, showHints }: { onPrev: () => void; onNext: () => void; showHints: boolean }) => {
+  const [leftTapped, setLeftTapped] = useState(false);
+  const [rightTapped, setRightTapped] = useState(false);
+  
+  const handleLeftTap = () => {
+    setLeftTapped(true);
+    playTapSound();
+    triggerHaptic('light');
+    onPrev();
+    setTimeout(() => setLeftTapped(false), 150);
+  };
+  
+  const handleRightTap = () => {
+    setRightTapped(true);
+    playTapSound();
+    triggerHaptic('light');
+    onNext();
+    setTimeout(() => setRightTapped(false), 150);
+  };
+  
   return (
     <>
       {/* Left tap zone - go back */}
       <div 
         className="absolute left-0 top-0 w-1/3 h-full z-40 cursor-pointer group"
-        onClick={onPrev}
+        onClick={handleLeftTap}
       >
+        {/* Instant tap feedback ripple */}
+        <div className={`absolute inset-0 bg-white/5 transition-opacity duration-150 ${leftTapped ? 'opacity-100' : 'opacity-0'}`} />
+        
         {showHints && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="bg-black/50 backdrop-blur-sm rounded-full p-3">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-150 ${leftTapped ? 'scale-90' : 'scale-100'}`}>
               <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -138,11 +274,14 @@ const TapZones = ({ onPrev, onNext, showHints }: { onPrev: () => void; onNext: (
       {/* Right tap zone - go next */}
       <div 
         className="absolute right-0 top-0 w-2/3 h-full z-40 cursor-pointer group"
-        onClick={onNext}
+        onClick={handleRightTap}
       >
+        {/* Instant tap feedback ripple */}
+        <div className={`absolute inset-0 bg-white/5 transition-opacity duration-150 ${rightTapped ? 'opacity-100' : 'opacity-0'}`} />
+        
         {showHints && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="bg-black/50 backdrop-blur-sm rounded-full p-3">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-150 ${rightTapped ? 'scale-90' : 'scale-100'}`}>
               <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -151,6 +290,111 @@ const TapZones = ({ onPrev, onNext, showHints }: { onPrev: () => void; onNext: (
         )}
       </div>
     </>
+  );
+};
+
+// Interactive Button Component with micro-interactions
+interface InteractiveButtonProps {
+  onClick: (e: React.MouseEvent) => void;
+  children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  haptic?: 'light' | 'medium' | 'heavy';
+  sound?: boolean;
+}
+
+const InteractiveButton = ({ 
+  onClick, 
+  children, 
+  className = '', 
+  disabled = false, 
+  loading = false,
+  variant = 'primary',
+  haptic = 'light',
+  sound = true
+}: InteractiveButtonProps) => {
+  const [isPressed, setIsPressed] = useState(false);
+  const [showRipple, setShowRipple] = useState(false);
+  const [ripplePos, setRipplePos] = useState({ x: 0, y: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  
+  const baseStyles = "relative overflow-hidden transition-all duration-200 ease-out transform-gpu";
+  
+  const variantStyles = {
+    primary: "bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 text-white",
+    secondary: "bg-[#0a0a2e]/80 border border-[#00ff88]/30 text-white hover:border-[#00ff88]/60",
+    ghost: "bg-transparent text-white/70 hover:text-white hover:bg-white/5"
+  };
+  
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled || loading) return;
+    
+    // Create ripple effect at click position
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setRipplePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setShowRipple(true);
+      setTimeout(() => setShowRipple(false), 600);
+    }
+    
+    // Press animation
+    setIsPressed(true);
+    setTimeout(() => setIsPressed(false), 150);
+    
+    // Sound and haptic feedback
+    if (sound) playTapSound();
+    triggerHaptic(haptic);
+    
+    onClick(e);
+  };
+  
+  return (
+    <button
+      ref={buttonRef}
+      onClick={handleClick}
+      disabled={disabled || loading}
+      className={`
+        ${baseStyles}
+        ${variantStyles[variant]}
+        ${isPressed ? 'scale-[0.97]' : 'scale-100 hover:scale-[1.02]'}
+        ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        active:scale-[0.97]
+        ${className}
+      `}
+      style={{
+        transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease'
+      }}
+    >
+      {/* Ripple effect */}
+      {showRipple && (
+        <span 
+          className="absolute rounded-full bg-white/30 animate-[ripple_600ms_ease-out_forwards] pointer-events-none"
+          style={{
+            left: ripplePos.x - 50,
+            top: ripplePos.y - 50,
+            width: 100,
+            height: 100,
+          }}
+        />
+      )}
+      
+      {/* Loading spinner overlay */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+      
+      {/* Button content */}
+      <span className={`relative z-10 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+        {children}
+      </span>
+    </button>
   );
 };
 
@@ -312,9 +556,17 @@ const CheckoutModal = ({ isOpen, onClose, productId, product }: CheckoutModalPro
           
           {/* Checkout button */}
           <button
-            onClick={handleCheckout}
+            onClick={() => {
+              playSuccessSound();
+              triggerHaptic('success');
+              handleCheckout();
+            }}
             disabled={loading}
-            className="w-full py-4 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+            className="w-full py-4 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.97] min-h-[56px]"
+            style={{ 
+              transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms ease',
+              boxShadow: loading ? 'none' : '0 0 25px rgba(0, 255, 136, 0.25)'
+            }}
           >
             {loading ? (
               <>
@@ -356,20 +608,30 @@ const HeroSlide = ({ isActive }: { isActive: boolean }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,0,180,0.15)_0%,transparent_70%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(0,255,136,0.08)_0%,transparent_50%)]" />
       
-      {/* Cosmic orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px] animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan-500/10 blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
+      {/* Cosmic orbs with parallax-like floating */}
+      <div 
+        className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px]"
+        style={{ animation: 'float-orb-slow 8s ease-in-out infinite' }}
+      />
+      <div 
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan-500/10 blur-[80px]"
+        style={{ animation: 'float-orb-slow 10s ease-in-out infinite reverse', animationDelay: '-3s' }}
+      />
+      <div 
+        className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full bg-[#00ff88]/5 blur-[60px]"
+        style={{ animation: 'float-orb-slow 12s ease-in-out infinite', animationDelay: '-5s' }}
+      />
       
       <div className="relative z-10 max-w-lg mx-auto text-center">
         {/* Divine Transmission Banner */}
         <div className="mb-4 animate-[fadeIn_1s_ease-out]">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#1a0a2e]/80 via-[#0a0a2e]/80 to-[#1a0a2e]/80 border border-[#00ff88]/30 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#1a0a2e]/80 via-[#0a0a2e]/80 to-[#1a0a2e]/80 border border-[#00ff88]/30 backdrop-blur-sm transition-shadow duration-300 hover:shadow-[0_0_20px_rgba(0,255,136,0.2)]">
             <span className="text-[#00ff88] animate-pulse text-sm">◈</span>
             <span className="font-['Orbitron'] text-[#00ff88]/90 font-semibold text-xs tracking-wider">
               DIVINE TRANSMISSION
@@ -378,21 +640,27 @@ const HeroSlide = ({ isActive }: { isActive: boolean }) => {
           </div>
         </div>
 
-        {/* Cloaked messenger image */}
+        {/* Cloaked messenger image with breathing animation */}
         <div className="relative mb-6">
-          <div className={`relative mx-auto w-36 h-36 md:w-48 md:h-48 rounded-full overflow-hidden transition-all duration-1000 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-            <div className="absolute inset-0 rounded-full border-2 border-[#00ff88]/50 animate-pulse" />
+          <div 
+            className={`relative mx-auto w-36 h-36 md:w-48 md:h-48 rounded-full overflow-hidden transition-all duration-1000 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+            style={{ animation: imageLoaded ? 'breathing 4s ease-in-out infinite' : 'none' }}
+          >
+            <div className="absolute inset-0 rounded-full border-2 border-[#00ff88]/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
             <div className="absolute -inset-2 rounded-full border border-purple-500/30 animate-[cosmic-rotate_20s_linear_infinite]" />
             <div className="absolute -inset-4 rounded-full border border-cyan-500/20 animate-[cosmic-rotate_30s_linear_infinite_reverse]" />
+            
+            {/* Glowing aura around messenger */}
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#00ff88]/20 via-purple-500/20 to-cyan-500/20 blur-md" style={{ animation: 'aura-pulse 3s ease-in-out infinite' }} />
             
             <img
               src="./cloaked-messenger-portrait-KakJfYU78kjRavrkE3GIf.png"
               alt="The Cosmic Messenger"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover relative z-10"
               onLoad={() => setImageLoaded(true)}
             />
             
-            <div className="absolute inset-0 bg-gradient-to-t from-[#00ff88]/20 via-transparent to-purple-500/20 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#00ff88]/20 via-transparent to-purple-500/20 pointer-events-none z-20" />
           </div>
         </div>
 
@@ -425,7 +693,7 @@ const HeroSlide = ({ isActive }: { isActive: boolean }) => {
         </div>
 
         {/* Tap to continue indicator */}
-        <div className="mt-8 animate-pulse">
+        <div className="mt-8" style={{ animation: 'float-gentle 2s ease-in-out infinite' }}>
           <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
             <span>TAP ANYWHERE TO CONTINUE</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -441,7 +709,7 @@ const HeroSlide = ({ isActive }: { isActive: boolean }) => {
 // SLIDE 2: Divine Message
 const DivineMessageSlide = ({ isActive }: { isActive: boolean }) => {
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.1)_0%,transparent_60%)]" />
       
@@ -489,27 +757,44 @@ const DivineMessageSlide = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-// SLIDE 3: Phone iMessage Style
+// SLIDE 3: Phone iMessage Style - Realistic version
+interface MessageData {
+  text: string;
+  type: 'incoming' | 'sent';
+  delivered?: boolean;
+  read?: boolean;
+  time?: string;
+  showTimestamp?: boolean;
+}
+
 const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvance?: () => void }) => {
-  const [messages, setMessages] = useState<Array<{ text: string; type: 'incoming' | 'typing' | 'sent'; visible: boolean }>>([]);
+  const [messages, setMessages] = useState<MessageData[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const [showTapButton, setShowTapButton] = useState(false);
   const [waitingForReply, setWaitingForReply] = useState(false);
   const [phase, setPhase] = useState<'initial' | 'afterReply'>('initial');
+  const [currentTime, setCurrentTime] = useState('3:33');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Phase 1: Initial messages up to the point where user needs to reply
-  const initialMessages = [
-    { text: "📡 Incoming transmission...", type: 'incoming' as const, delay: 800 },
-    { text: "I've been waiting for you", type: 'incoming' as const, delay: 2500 },
-    { text: "⚡ Your frequency detected...", type: 'incoming' as const, delay: 4500 },
+  // Auto scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+  
+  // Phase 1: Initial messages with realistic typing delays
+  const initialMessages: Array<{ text: string; typingDuration: number; delay: number; time: string; showTimestamp?: boolean }> = [
+    { text: "📡 Incoming transmission...", typingDuration: 1800, delay: 1000, time: '3:33', showTimestamp: true },
+    { text: "I've been waiting for you", typingDuration: 2200, delay: 3500, time: '3:33' },
+    { text: "⚡ Your frequency detected...", typingDuration: 2500, delay: 6500, time: '3:34', showTimestamp: true },
   ];
   
   // Phase 2: Messages after user taps to reply
-  const afterReplyMessages = [
-    { text: "🔮 Initiating soul scan...", type: 'incoming' as const, delay: 500 },
-    { text: "Analyzing cosmic signature...", type: 'incoming' as const, delay: 2000 },
-    { text: "✨ MATCH FOUND", type: 'incoming' as const, delay: 3500 },
-    { text: "Cosmic Warrior Soul", type: 'incoming' as const, delay: 4500 },
-    { text: "You are one of the seven. The prophecy is real.", type: 'incoming' as const, delay: 6000 },
+  const afterReplyMessages: Array<{ text: string; typingDuration: number; delay: number; time: string; showTimestamp?: boolean }> = [
+    { text: "🔮 Initiating soul scan...", typingDuration: 1500, delay: 800, time: '3:34' },
+    { text: "Analyzing cosmic signature...", typingDuration: 2800, delay: 3000, time: '3:35', showTimestamp: true },
+    { text: "✨ MATCH FOUND", typingDuration: 1200, delay: 6500, time: '3:35' },
+    { text: "Cosmic Warrior Soul", typingDuration: 1800, delay: 8500, time: '3:35' },
+    { text: "You are one of the seven. The prophecy is real.", typingDuration: 3200, delay: 11000, time: '3:36', showTimestamp: true },
   ];
   
   // Initial messages sequence
@@ -521,39 +806,46 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     setMessages([]);
     setShowTapButton(false);
     setWaitingForReply(false);
+    setIsTyping(false);
     
     const timeouts: NodeJS.Timeout[] = [];
     
     initialMessages.forEach((msg, index) => {
-      // Show typing indicator first
-      if (msg.type === 'incoming') {
-        const typingTimeout = setTimeout(() => {
-          setMessages(prev => [...prev, { text: '', type: 'typing', visible: true }]);
-        }, msg.delay - 800);
-        timeouts.push(typingTimeout);
-      }
+      // Show typing indicator
+      const typingStartTimeout = setTimeout(() => {
+        setIsTyping(true);
+        setCurrentTime(msg.time);
+      }, msg.delay);
+      timeouts.push(typingStartTimeout);
       
+      // Show the actual message after typing duration
       const msgTimeout = setTimeout(() => {
-        setMessages(prev => {
-          const filtered = prev.filter(m => m.type !== 'typing');
-          return [...filtered, { ...msg, visible: true }];
-        });
+        setIsTyping(false);
+        playMessageSound(); // Play message received sound
+        triggerHaptic('light');
+        setMessages(prev => [...prev, { 
+          text: msg.text, 
+          type: 'incoming',
+          delivered: true,
+          time: msg.time,
+          showTimestamp: msg.showTimestamp
+        }]);
         
         // After initial messages, show TAP TO REPLY
         if (index === initialMessages.length - 1) {
           setTimeout(() => {
             setShowTapButton(true);
             setWaitingForReply(true);
-          }, 1000);
+          }, 1200);
         }
-      }, msg.delay);
+      }, msg.delay + msg.typingDuration);
       timeouts.push(msgTimeout);
     });
     
     return () => timeouts.forEach(t => clearTimeout(t));
   }, [isActive, phase]);
   
-  // After reply messages sequence
+  // After reply messages sequence  
   useEffect(() => {
     if (!isActive || phase !== 'afterReply') {
       return;
@@ -562,27 +854,35 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     const timeouts: NodeJS.Timeout[] = [];
     
     afterReplyMessages.forEach((msg, index) => {
-      // Show typing indicator first
-      if (msg.type === 'incoming') {
-        const typingTimeout = setTimeout(() => {
-          setMessages(prev => [...prev, { text: '', type: 'typing', visible: true }]);
-        }, msg.delay - 500);
-        timeouts.push(typingTimeout);
-      }
+      // Show typing indicator
+      const typingStartTimeout = setTimeout(() => {
+        setIsTyping(true);
+        setCurrentTime(msg.time);
+      }, msg.delay);
+      timeouts.push(typingStartTimeout);
       
+      // Show the actual message after typing duration
       const msgTimeout = setTimeout(() => {
-        setMessages(prev => {
-          const filtered = prev.filter(m => m.type !== 'typing');
-          return [...filtered, { ...msg, visible: true }];
-        });
+        setIsTyping(false);
+        playMessageSound(); // Play message received sound
+        triggerHaptic('light');
+        setMessages(prev => [...prev, { 
+          text: msg.text, 
+          type: 'incoming',
+          delivered: true,
+          time: msg.time,
+          showTimestamp: msg.showTimestamp
+        }]);
         
         // After all messages, advance to next slide
         if (index === afterReplyMessages.length - 1) {
           setTimeout(() => {
+            playSuccessSound();
+            triggerHaptic('success');
             onAdvance?.();
-          }, 2000);
+          }, 2500);
         }
-      }, msg.delay);
+      }, msg.delay + msg.typingDuration);
       timeouts.push(msgTimeout);
     });
     
@@ -596,6 +896,8 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       setShowTapButton(false);
       setWaitingForReply(false);
       setPhase('initial');
+      setIsTyping(false);
+      setCurrentTime('3:33');
     }
   }, [isActive]);
   
@@ -605,20 +907,34 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     setShowTapButton(false);
     setWaitingForReply(false);
     
-    // Add user's reply
-    setMessages(prev => [...prev, { text: "What frequency? 🤔", type: 'sent', visible: true }]);
+    // Add user's reply with delivered/read states
+    setMessages(prev => [...prev, { 
+      text: "What frequency? 🤔", 
+      type: 'sent',
+      delivered: true,
+      read: false,
+      time: '3:34',
+      showTimestamp: true
+    }]);
+    
+    // Mark as read after a moment
+    setTimeout(() => {
+      setMessages(prev => prev.map((msg, i) => 
+        i === prev.length - 1 ? { ...msg, read: true } : msg
+      ));
+    }, 600);
     
     // Start phase 2
     setTimeout(() => {
       setPhase('afterReply');
-    }, 800);
+    }, 1000);
   };
   
   return (
-    <div className={`absolute inset-0 flex flex-col transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       {/* iPhone-style status bar */}
       <div className="bg-[#000000] pt-2 pb-1 px-6 flex justify-between items-center text-white text-xs">
-        <span className="font-semibold">3:33</span>
+        <span className="font-semibold">{currentTime}</span>
         <div className="absolute left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-2xl" />
         <div className="flex items-center gap-1">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -663,24 +979,28 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       </div>
       
       {/* Messages area */}
-      <div className="flex-1 bg-[#000000] px-4 py-4 overflow-y-auto">
-        <div className="max-w-lg mx-auto space-y-2">
+      <div className="flex-1 bg-[#000000] px-4 py-4 overflow-y-auto scroll-momentum">
+        <div className="max-w-lg mx-auto space-y-1">
           {/* Date header */}
           <div className="text-center mb-4">
             <span className="text-gray-500 text-xs bg-gray-800/50 px-3 py-1 rounded-full">Today 3:33 AM</span>
           </div>
           
           {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.type === 'sent' ? 'justify-end' : 'justify-start'} animate-[slideUp_0.3s_ease-out]`}>
-              {msg.type === 'typing' ? (
-                <div className="bg-[#3a3a3c] rounded-2xl rounded-bl-md px-4 py-3">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
+            <div key={i}>
+              {/* Timestamp between messages */}
+              {msg.showTimestamp && i > 0 && (
+                <div className="text-center my-2">
+                  <span className="text-gray-600 text-[10px]">{msg.time} AM</span>
                 </div>
-              ) : (
+              )}
+              
+              <div 
+                className={`flex ${msg.type === 'sent' ? 'justify-end' : 'justify-start'}`}
+                style={{
+                  animation: 'message-slide-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}
+              >
                 <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl ${
                   msg.type === 'sent' 
                     ? 'bg-[#0a84ff] text-white rounded-br-md' 
@@ -688,9 +1008,36 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
                 }`}>
                   <p className="text-[15px] leading-snug">{msg.text}</p>
                 </div>
+              </div>
+              
+              {/* Delivered/Read status for sent messages */}
+              {msg.type === 'sent' && (
+                <div className="flex justify-end mt-0.5 mr-1">
+                  <span className="text-[10px] text-gray-500">
+                    {msg.read ? 'Read' : msg.delivered ? 'Delivered' : ''}
+                  </span>
+                </div>
               )}
             </div>
           ))}
+          
+          {/* Typing indicator */}
+          {isTyping && (
+            <div 
+              className="flex justify-start"
+              style={{ animation: 'message-slide-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            >
+              <div className="bg-[#3a3a3c] rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
       </div>
       
@@ -698,8 +1045,16 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       <div className="bg-[#1c1c1e] px-4 py-3 border-t border-gray-700/50">
         {showTapButton ? (
           <button 
-            onClick={handleTapToReply}
-            className="w-full max-w-lg mx-auto block bg-[#0a84ff] text-white py-3 rounded-full font-semibold text-base animate-pulse"
+            onClick={() => {
+              playTapSound();
+              triggerHaptic('medium');
+              handleTapToReply();
+            }}
+            className="w-full max-w-lg mx-auto block bg-[#0a84ff] text-white py-3 rounded-full font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[48px]"
+            style={{ 
+              transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+              animation: 'pulse-glow 2s ease-in-out infinite'
+            }}
           >
             TAP TO REPLY
           </button>
@@ -778,7 +1133,7 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
   
   if (scanning) {
     return (
-      <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
         
         <div className="relative z-10 text-center">
@@ -804,7 +1159,7 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
   }
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,0,180,0.15)_0%,transparent_60%)]" />
       
@@ -835,9 +1190,12 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
               key={i}
               onClick={(e) => {
                 e.stopPropagation();
+                playTapSound();
+                triggerHaptic('medium');
                 handleAnswer(option);
               }}
-              className="w-full p-4 rounded-xl bg-purple-900/30 border border-purple-500/30 text-left font-['Rajdhani'] text-white hover:bg-purple-800/40 hover:border-purple-500/50 transition-all duration-200 active:scale-[0.98]"
+              className="w-full p-4 rounded-xl bg-purple-900/30 border border-purple-500/30 text-left font-['Rajdhani'] text-white hover:bg-purple-800/40 hover:border-purple-500/50 transition-all duration-200 active:scale-[0.97] hover:scale-[1.01] min-h-[52px]"
+              style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms ease, border-color 200ms ease' }}
             >
               <span className="text-purple-400 mr-3">◈</span>
               {option}
@@ -887,7 +1245,7 @@ const ArchetypeRevealSlide = ({ isActive, archetype }: { isActive: boolean; arch
   const data = archetypeData[archetype] || archetypeData["Cosmic Warrior"];
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.1)_0%,transparent_60%)]" />
       
@@ -953,7 +1311,7 @@ const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBo
   };
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div 
         className="absolute inset-0"
         style={{
@@ -1001,9 +1359,10 @@ const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBo
         {/* Pricing buttons */}
         <div className="grid grid-cols-3 gap-2 mb-4 pointer-events-auto">
           <button
-            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_digital', 'Digital Edition', '$14.99'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleBookPurchase('book_digital', 'Digital Edition', '$14.99'); }}
             disabled={loadingProduct !== null}
-            className="bg-[#0a0a2e]/80 border border-[#00ff88]/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-[#00ff88]/60 disabled:opacity-50"
+            className="bg-[#0a0a2e]/80 border border-[#00ff88]/30 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-[#00ff88]/60 disabled:opacity-50 min-h-[88px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="block text-lg mb-1">📱</span>
             <span className="block font-['Orbitron'] text-[#00ff88] text-sm font-bold">$14.99</span>
@@ -1012,9 +1371,10 @@ const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBo
           </button>
           
           <button
-            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_paperback', 'Paperback Edition', '$24.99'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleBookPurchase('book_paperback', 'Paperback Edition', '$24.99'); }}
             disabled={loadingProduct !== null}
-            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-purple-500/60 disabled:opacity-50"
+            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-purple-500/60 disabled:opacity-50 min-h-[88px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="block text-lg mb-1">📚</span>
             <span className="block font-['Orbitron'] text-purple-300 text-sm font-bold">$24.99</span>
@@ -1023,9 +1383,10 @@ const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBo
           </button>
           
           <button
-            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_collector', "Collector's Edition", '$39.99'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleBookPurchase('book_collector', "Collector's Edition", '$39.99'); }}
             disabled={loadingProduct !== null}
-            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-105 hover:border-amber-500/70 disabled:opacity-50"
+            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-amber-500/70 disabled:opacity-50 min-h-[88px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="block text-lg mb-1">✨</span>
             <span className="block font-['Orbitron'] text-amber-300 text-sm font-bold">$39.99</span>
@@ -1064,7 +1425,7 @@ const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAc
   };
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div 
         className="absolute inset-0"
         style={{
@@ -1090,9 +1451,10 @@ const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAc
         <div className="grid grid-cols-3 gap-2 mb-4 pointer-events-auto">
           {/* Initiate */}
           <button
-            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_initiate', 'Initiate Path', '$47/mo'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_initiate', 'Initiate Path', '$47/mo'); }}
             disabled={loadingProduct !== null}
-            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-purple-500/60 disabled:opacity-50"
+            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-purple-500/60 disabled:opacity-50 min-h-[100px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="block text-lg mb-1">🌟</span>
             <span className="block font-['Orbitron'] text-purple-300 text-xs font-bold">$47</span>
@@ -1103,9 +1465,10 @@ const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAc
           
           {/* Warrior - Featured */}
           <button
-            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_warrior', 'Warrior Path', '$97/mo'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_warrior', 'Warrior Path', '$97/mo'); }}
             disabled={loadingProduct !== null}
-            className="bg-gradient-to-br from-purple-900/60 via-[#0a0a2e] to-cyan-900/40 border-2 border-[#00ff88]/50 rounded-xl p-3 transition-all hover:scale-105 hover:border-[#00ff88]/70 disabled:opacity-50 relative"
+            className="bg-gradient-to-br from-purple-900/60 via-[#0a0a2e] to-cyan-900/40 border-2 border-[#00ff88]/50 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-[#00ff88]/70 disabled:opacity-50 relative min-h-[100px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#00ff88] text-black text-[8px] font-['Orbitron'] px-2 py-0.5 rounded-full">POPULAR</span>
             <span className="block text-lg mb-1">⚔️</span>
@@ -1117,9 +1480,10 @@ const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAc
           
           {/* Master */}
           <button
-            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_master', 'Master Path', '$197/mo'); }}
+            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_master', 'Master Path', '$197/mo'); }}
             disabled={loadingProduct !== null}
-            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-105 hover:border-amber-500/70 disabled:opacity-50"
+            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-amber-500/70 disabled:opacity-50 min-h-[100px]"
+            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
           >
             <span className="block text-lg mb-1">👁️</span>
             <span className="block font-['Orbitron'] text-amber-300 text-xs font-bold">$197</span>
@@ -1183,7 +1547,7 @@ const FinalCTASlide = ({ isActive, onCheckout }: { isActive: boolean; onCheckout
   }, [isActive]);
   
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,0,180,0.2)_0%,transparent_60%)]" />
       
@@ -1239,9 +1603,21 @@ const FinalCTASlide = ({ isActive, onCheckout }: { isActive: boolean; onCheckout
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            playSuccessSound();
+            triggerHaptic('success');
             onCheckout();
           }}
-          className="w-full py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider flex items-center justify-center gap-2 pointer-events-auto"
+          className="w-full py-4 font-['Orbitron'] text-base font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-2 pointer-events-auto hover:scale-[1.02] active:scale-[0.97] min-h-[56px]"
+          style={{ 
+            transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms ease',
+            boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)'
+          }}
+          onMouseEnter={(e) => {
+            (e.target as HTMLButtonElement).style.boxShadow = '0 0 50px rgba(0, 255, 136, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            (e.target as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(0, 255, 136, 0.3)';
+          }}
         >
           <span>⚡</span>
           CLAIM YOUR AWAKENING
@@ -1420,6 +1796,88 @@ const Index = () => {
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes ripple {
+          0% { transform: scale(0); opacity: 0.5; }
+          100% { transform: scale(4); opacity: 0; }
+        }
+        @keyframes bounce-subtle {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+          50% { box-shadow: 0 0 40px rgba(0, 255, 136, 0.5); }
+        }
+        @keyframes float-gentle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes tap-feedback {
+          0% { transform: scale(1); }
+          50% { transform: scale(0.97); }
+          100% { transform: scale(1); }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.4)); }
+          50% { filter: drop-shadow(0 0 16px rgba(0, 255, 136, 0.7)); }
+        }
+        @keyframes message-slide-bounce {
+          0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+          60% { transform: translateY(-3px) scale(1.01); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes breathing {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.03); }
+        }
+        @keyframes float-orb-slow {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(10px, -15px); }
+          50% { transform: translate(-5px, -8px); }
+          75% { transform: translate(-15px, -5px); }
+        }
+        @keyframes pulse-border {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        @keyframes aura-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .ease-out-expo {
+          transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .ease-in-out-expo {
+          transition-timing-function: cubic-bezier(0.87, 0, 0.13, 1);
+        }
+        
+        /* Touch target optimization for mobile */
+        button, a, [role="button"] {
+          min-height: 44px;
+          min-width: 44px;
+        }
+        
+        /* Touch active state - instant feedback */
+        .touch-active {
+          transform: scale(0.97);
+          opacity: 0.9;
+        }
+        
+        /* Disable tap highlight on mobile */
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Better scrolling momentum on mobile */
+        .scroll-momentum {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+        
+        /* Fast touch response */
+        button, a, [role="button"], .interactive {
+          touch-action: manipulation;
         }
       `}</style>
     </div>
