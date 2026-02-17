@@ -229,40 +229,72 @@ const ProgressBars = ({ currentSlide, totalSlides, isAnimating }: { currentSlide
   );
 };
 
-// Tap zones for navigation with instant visual feedback
+// Tap zones for navigation with realistic ripple effects
 const TapZones = ({ onPrev, onNext, showHints }: { onPrev: () => void; onNext: () => void; showHints: boolean }) => {
   const [leftTapped, setLeftTapped] = useState(false);
   const [rightTapped, setRightTapped] = useState(false);
+  const [leftRipple, setLeftRipple] = useState<{ x: number; y: number } | null>(null);
+  const [rightRipple, setRightRipple] = useState<{ x: number; y: number } | null>(null);
   
-  const handleLeftTap = () => {
+  const handleLeftTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Get tap position relative to element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
     setLeftTapped(true);
+    setLeftRipple({ x, y });
     playTapSound();
     triggerHaptic('light');
     onPrev();
+    
     setTimeout(() => setLeftTapped(false), 150);
+    setTimeout(() => setLeftRipple(null), 600);
   };
   
-  const handleRightTap = () => {
+  const handleRightTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Get tap position relative to element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
     setRightTapped(true);
+    setRightRipple({ x, y });
     playTapSound();
     triggerHaptic('light');
     onNext();
+    
     setTimeout(() => setRightTapped(false), 150);
+    setTimeout(() => setRightRipple(null), 600);
   };
   
   return (
     <>
       {/* Left tap zone - go back */}
       <div 
-        className="absolute left-0 top-0 w-1/3 h-full z-40 cursor-pointer group"
+        className="absolute left-0 top-0 w-1/3 h-full z-40 cursor-pointer group touch-manipulation overflow-hidden"
         onClick={handleLeftTap}
       >
-        {/* Instant tap feedback ripple */}
-        <div className={`absolute inset-0 bg-white/5 transition-opacity duration-150 ${leftTapped ? 'opacity-100' : 'opacity-0'}`} />
+        {/* Quick flash feedback */}
+        <div className={`absolute inset-0 bg-white/8 transition-opacity duration-100 ${leftTapped ? 'opacity-100' : 'opacity-0'}`} />
+        
+        {/* Ripple effect emanating from tap position */}
+        {leftRipple && (
+          <span 
+            className="absolute rounded-full bg-white/20 pointer-events-none"
+            style={{
+              left: leftRipple.x - 75,
+              top: leftRipple.y - 75,
+              width: 150,
+              height: 150,
+              animation: 'ripple-expand 600ms ease-out forwards',
+            }}
+          />
+        )}
         
         {showHints && (
           <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-150 ${leftTapped ? 'scale-90' : 'scale-100'}`}>
+            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-100 ${leftTapped ? 'scale-[0.85]' : 'scale-100'}`}>
               <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -273,15 +305,29 @@ const TapZones = ({ onPrev, onNext, showHints }: { onPrev: () => void; onNext: (
       
       {/* Right tap zone - go next */}
       <div 
-        className="absolute right-0 top-0 w-2/3 h-full z-40 cursor-pointer group"
+        className="absolute right-0 top-0 w-2/3 h-full z-40 cursor-pointer group touch-manipulation overflow-hidden"
         onClick={handleRightTap}
       >
-        {/* Instant tap feedback ripple */}
-        <div className={`absolute inset-0 bg-white/5 transition-opacity duration-150 ${rightTapped ? 'opacity-100' : 'opacity-0'}`} />
+        {/* Quick flash feedback */}
+        <div className={`absolute inset-0 bg-white/8 transition-opacity duration-100 ${rightTapped ? 'opacity-100' : 'opacity-0'}`} />
+        
+        {/* Ripple effect emanating from tap position */}
+        {rightRipple && (
+          <span 
+            className="absolute rounded-full bg-white/20 pointer-events-none"
+            style={{
+              left: rightRipple.x - 75,
+              top: rightRipple.y - 75,
+              width: 150,
+              height: 150,
+              animation: 'ripple-expand 600ms ease-out forwards',
+            }}
+          />
+        )}
         
         {showHints && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-150 ${rightTapped ? 'scale-90' : 'scale-100'}`}>
+            <div className={`bg-black/50 backdrop-blur-sm rounded-full p-3 transition-transform duration-100 ${rightTapped ? 'scale-[0.85]' : 'scale-100'}`}>
               <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -320,7 +366,7 @@ const InteractiveButton = ({
   const [ripplePos, setRipplePos] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   
-  const baseStyles = "relative overflow-hidden transition-all duration-200 ease-out transform-gpu";
+  const baseStyles = "relative overflow-hidden transition-all ease-out transform-gpu touch-manipulation";
   
   const variantStyles = {
     primary: "bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 text-white",
@@ -328,10 +374,11 @@ const InteractiveButton = ({
     ghost: "bg-transparent text-white/70 hover:text-white hover:bg-white/5"
   };
   
-  const handleClick = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     if (disabled || loading) return;
+    setIsPressed(true);
     
-    // Create ripple effect at click position
+    // Create ripple effect at pointer position
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect) {
       setRipplePos({
@@ -342,13 +389,19 @@ const InteractiveButton = ({
       setTimeout(() => setShowRipple(false), 600);
     }
     
-    // Press animation
-    setIsPressed(true);
-    setTimeout(() => setIsPressed(false), 150);
-    
-    // Sound and haptic feedback
-    if (sound) playTapSound();
+    // Immediate haptic feedback
     triggerHaptic(haptic);
+  };
+  
+  const handlePointerUp = () => {
+    setIsPressed(false);
+  };
+  
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled || loading) return;
+    
+    // Sound on click
+    if (sound) playTapSound();
     
     onClick(e);
   };
@@ -357,28 +410,36 @@ const InteractiveButton = ({
     <button
       ref={buttonRef}
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
       disabled={disabled || loading}
       className={`
         ${baseStyles}
         ${variantStyles[variant]}
-        ${isPressed ? 'scale-[0.97]' : 'scale-100 hover:scale-[1.02]'}
         ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        active:scale-[0.97]
         ${className}
       `}
       style={{
-        transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease'
+        transform: isPressed ? 'scale(0.95)' : 'scale(1)',
+        transition: isPressed 
+          ? 'transform 80ms cubic-bezier(0.4, 0, 0.2, 1)' 
+          : 'transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+        boxShadow: isPressed 
+          ? '0 2px 8px rgba(0, 0, 0, 0.15)' 
+          : '0 4px 15px rgba(0, 0, 0, 0.2)'
       }}
     >
-      {/* Ripple effect */}
+      {/* Ripple effect emanating from touch position */}
       {showRipple && (
         <span 
-          className="absolute rounded-full bg-white/30 animate-[ripple_600ms_ease-out_forwards] pointer-events-none"
+          className="absolute rounded-full bg-white/30 pointer-events-none"
           style={{
             left: ripplePos.x - 50,
             top: ripplePos.y - 50,
             width: 100,
             height: 100,
+            animation: 'ripple-expand 600ms ease-out forwards',
           }}
         />
       )}
@@ -609,23 +670,29 @@ const HeroSlide = ({ isActive }: { isActive: boolean }) => {
   
   return (
     <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-      {/* Background gradients */}
+      {/* Background gradients with parallax layering */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,0,180,0.15)_0%,transparent_70%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(0,255,136,0.08)_0%,transparent_50%)]" />
+      <div 
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,0,180,0.15)_0%,transparent_70%)]"
+        style={{ animation: 'parallax-layer-1 15s ease-in-out infinite' }}
+      />
+      <div 
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(0,255,136,0.08)_0%,transparent_50%)]"
+        style={{ animation: 'parallax-layer-2 18s ease-in-out infinite' }}
+      />
       
-      {/* Cosmic orbs with parallax-like floating */}
+      {/* Cosmic orbs with physics-based parallax floating */}
       <div 
-        className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px]"
-        style={{ animation: 'float-orb-slow 8s ease-in-out infinite' }}
+        className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px] animate-physics"
+        style={{ animation: 'parallax-float 12s ease-in-out infinite' }}
       />
       <div 
-        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan-500/10 blur-[80px]"
-        style={{ animation: 'float-orb-slow 10s ease-in-out infinite reverse', animationDelay: '-3s' }}
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan-500/10 blur-[80px] animate-physics"
+        style={{ animation: 'parallax-float 15s ease-in-out infinite reverse', animationDelay: '-3s' }}
       />
       <div 
-        className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full bg-[#00ff88]/5 blur-[60px]"
-        style={{ animation: 'float-orb-slow 12s ease-in-out infinite', animationDelay: '-5s' }}
+        className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full bg-[#00ff88]/5 blur-[60px] animate-physics"
+        style={{ animation: 'parallax-float 18s ease-in-out infinite', animationDelay: '-7s' }}
       />
       
       <div className="relative z-10 max-w-lg mx-auto text-center">
@@ -757,7 +824,7 @@ const DivineMessageSlide = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-// SLIDE 3: Phone iMessage Style - Realistic version
+// SLIDE 3: Phone iMessage Style - Hyper-Realistic version
 interface MessageData {
   text: string;
   type: 'incoming' | 'sent';
@@ -767,6 +834,162 @@ interface MessageData {
   showTimestamp?: boolean;
 }
 
+// Enhanced iMessage notification sound with realistic tone
+const playMessageReceivedSound = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    
+    const now = audioContext.currentTime;
+    
+    // Two-tone iMessage style notification
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    // First higher tone
+    osc1.frequency.setValueAtTime(1318, now); // E6
+    osc1.type = 'sine';
+    
+    // Second lower tone (slightly delayed)  
+    osc2.frequency.setValueAtTime(1046, now + 0.06); // C6
+    osc2.type = 'sine';
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.07, now + 0.01);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.12);
+    osc2.start(now + 0.06);
+    osc2.stop(now + 0.2);
+  } catch {
+    // Silently fail
+  }
+};
+
+// Hyper-realistic typing indicator with natural bouncing dots
+const RealisticTypingIndicator = () => {
+  return (
+    <div 
+      className="flex justify-start"
+      style={{ animation: 'typing-appear 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+    >
+      <div className="bg-[#3a3a3c] rounded-[18px] rounded-bl-[4px] px-4 py-3 relative">
+        <div className="flex gap-[5px] items-center h-[14px]">
+          <span 
+            className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full"
+            style={{ 
+              animation: 'typing-bounce-natural 1.4s ease-in-out infinite',
+              animationDelay: '0ms'
+            }} 
+          />
+          <span 
+            className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full"
+            style={{ 
+              animation: 'typing-bounce-natural 1.4s ease-in-out infinite',
+              animationDelay: '200ms'
+            }} 
+          />
+          <span 
+            className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full"
+            style={{ 
+              animation: 'typing-bounce-natural 1.4s ease-in-out infinite',
+              animationDelay: '400ms'
+            }} 
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Message bubble with animated delivery states and arrival flash
+const MessageBubbleEnhanced = ({ 
+  msg, 
+  isNew,
+  showDelivered 
+}: { 
+  msg: MessageData; 
+  isNew: boolean;
+  showDelivered: boolean;
+}) => {
+  const [status, setStatus] = useState<'sending' | 'delivered' | 'read'>(
+    msg.type === 'sent' ? (msg.delivered ? (msg.read ? 'read' : 'delivered') : 'sending') : 'delivered'
+  );
+  const [showArrivalFlash, setShowArrivalFlash] = useState(isNew && msg.type === 'incoming');
+  
+  useEffect(() => {
+    if (msg.type === 'sent' && isNew) {
+      setStatus('sending');
+      const deliverTimeout = setTimeout(() => setStatus('delivered'), 450);
+      const readTimeout = msg.read ? setTimeout(() => setStatus('read'), 1400) : null;
+      
+      return () => {
+        clearTimeout(deliverTimeout);
+        if (readTimeout) clearTimeout(readTimeout);
+      };
+    } else if (msg.type === 'sent') {
+      setStatus(msg.read ? 'read' : msg.delivered ? 'delivered' : 'sending');
+    }
+  }, [msg.type, msg.delivered, msg.read, isNew]);
+  
+  // Clear arrival flash after animation
+  useEffect(() => {
+    if (showArrivalFlash) {
+      const timer = setTimeout(() => setShowArrivalFlash(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [showArrivalFlash]);
+  
+  return (
+    <div className="mb-[2px]">
+      <div 
+        className={`flex ${msg.type === 'sent' ? 'justify-end' : 'justify-start'}`}
+        style={{
+          animation: isNew ? 'message-pop-enhanced 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
+      >
+        <div 
+          className={`max-w-[75%] px-[12px] py-[8px] relative ${
+            msg.type === 'sent' 
+              ? 'bg-[#007aff] text-white rounded-[18px] rounded-br-[4px]' 
+              : 'bg-[#3a3a3c] text-white rounded-[18px] rounded-bl-[4px]'
+          }`}
+          style={{
+            boxShadow: showArrivalFlash 
+              ? '0 0 15px rgba(255, 255, 255, 0.4), 0 1px 1px rgba(0,0,0,0.12)' 
+              : '0 1px 1px rgba(0,0,0,0.12)',
+            transition: 'box-shadow 300ms ease-out'
+          }}
+        >
+          <p className="text-[17px] leading-[22px] whitespace-pre-wrap">{msg.text}</p>
+        </div>
+      </div>
+      
+      {/* Delivery status for sent messages */}
+      {msg.type === 'sent' && showDelivered && (
+        <div 
+          className="flex justify-end mt-[3px] mr-[4px] transition-all duration-300"
+          style={{ opacity: status === 'sending' ? 0.6 : 1 }}
+        >
+          <span className="text-[11px] text-[#8e8e93] font-light tracking-[-0.1px]">
+            {status === 'sending' && 'Sending...'}
+            {status === 'delivered' && 'Delivered'}
+            {status === 'read' && `Read ${msg.time || ''} AM`}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvance?: () => void }) => {
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -774,55 +997,82 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
   const [waitingForReply, setWaitingForReply] = useState(false);
   const [phase, setPhase] = useState<'initial' | 'afterReply'>('initial');
   const [currentTime, setCurrentTime] = useState('3:33');
+  const [newMessageIndex, setNewMessageIndex] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Auto scroll to bottom when messages update
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   }, [messages, isTyping]);
   
-  // Phase 1: Initial messages with realistic typing delays
-  const initialMessages: Array<{ text: string; typingDuration: number; delay: number; time: string; showTimestamp?: boolean }> = [
-    { text: "📡 Incoming transmission...", typingDuration: 1800, delay: 1000, time: '3:33', showTimestamp: true },
-    { text: "I've been waiting for you", typingDuration: 2200, delay: 3500, time: '3:33' },
-    { text: "⚡ Your frequency detected...", typingDuration: 2500, delay: 6500, time: '3:34', showTimestamp: true },
+  // Phase 1: Initial messages with realistic varied typing delays (2-4 seconds typing time)
+  // pauseBefore = thinking pause before typing starts, typingDuration = how long typing indicator shows
+  const initialMessages: Array<{ 
+    text: string; 
+    typingDuration: number; 
+    pauseBefore: number; 
+    time: string; 
+    showTimestamp?: boolean 
+  }> = [
+    { text: "📡 Incoming transmission...", typingDuration: 2400, pauseBefore: 1200, time: '3:33', showTimestamp: true },
+    { text: "I've been waiting for you", typingDuration: 3200, pauseBefore: 1800, time: '3:33' },
+    { text: "⚡ Your frequency detected...", typingDuration: 2800, pauseBefore: 2400, time: '3:34', showTimestamp: true },
   ];
   
-  // Phase 2: Messages after user taps to reply
-  const afterReplyMessages: Array<{ text: string; typingDuration: number; delay: number; time: string; showTimestamp?: boolean }> = [
-    { text: "🔮 Initiating soul scan...", typingDuration: 1500, delay: 800, time: '3:34' },
-    { text: "Analyzing cosmic signature...", typingDuration: 2800, delay: 3000, time: '3:35', showTimestamp: true },
-    { text: "✨ MATCH FOUND", typingDuration: 1200, delay: 6500, time: '3:35' },
-    { text: "Cosmic Warrior Soul", typingDuration: 1800, delay: 8500, time: '3:35' },
-    { text: "You are one of the seven. The prophecy is real.", typingDuration: 3200, delay: 11000, time: '3:36', showTimestamp: true },
+  // Phase 2: Messages after user taps to reply - varied speeds like real typing
+  const afterReplyMessages: Array<{ 
+    text: string; 
+    typingDuration: number; 
+    pauseBefore: number; 
+    time: string; 
+    showTimestamp?: boolean 
+  }> = [
+    { text: "🔮 Initiating soul scan...", typingDuration: 2200, pauseBefore: 1400, time: '3:34' },
+    { text: "Analyzing cosmic signature...", typingDuration: 3800, pauseBefore: 2600, time: '3:35', showTimestamp: true },
+    { text: "✨ MATCH FOUND", typingDuration: 1600, pauseBefore: 3400, time: '3:35' },
+    { text: "Cosmic Warrior Soul", typingDuration: 2600, pauseBefore: 900, time: '3:36' },
+    { text: "You are one of the seven. The prophecy is real.", typingDuration: 4200, pauseBefore: 2200, time: '3:36', showTimestamp: true },
   ];
+  
+  // Calculate cumulative timings for message sequence
+  const getMessageTimings = (msgs: typeof initialMessages) => {
+    let cumulative = 0;
+    return msgs.map(msg => {
+      const startTyping = cumulative + msg.pauseBefore;
+      const showMessage = startTyping + msg.typingDuration;
+      cumulative = showMessage;
+      return { ...msg, startTyping, showMessage };
+    });
+  };
   
   // Initial messages sequence
   useEffect(() => {
-    if (!isActive || phase !== 'initial') {
-      return;
-    }
+    if (!isActive || phase !== 'initial') return;
     
     setMessages([]);
     setShowTapButton(false);
     setWaitingForReply(false);
     setIsTyping(false);
+    setNewMessageIndex(-1);
     
     const timeouts: NodeJS.Timeout[] = [];
+    const timings = getMessageTimings(initialMessages);
     
-    initialMessages.forEach((msg, index) => {
-      // Show typing indicator
-      const typingStartTimeout = setTimeout(() => {
+    timings.forEach((msg, index) => {
+      // Start typing indicator
+      timeouts.push(setTimeout(() => {
         setIsTyping(true);
         setCurrentTime(msg.time);
-      }, msg.delay);
-      timeouts.push(typingStartTimeout);
+      }, msg.startTyping));
       
-      // Show the actual message after typing duration
-      const msgTimeout = setTimeout(() => {
+      // Show message after typing
+      timeouts.push(setTimeout(() => {
         setIsTyping(false);
-        playMessageSound(); // Play message received sound
+        playMessageReceivedSound();
         triggerHaptic('light');
+        setNewMessageIndex(index);
         setMessages(prev => [...prev, { 
           text: msg.text, 
           type: 'incoming',
@@ -831,41 +1081,41 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           showTimestamp: msg.showTimestamp
         }]);
         
-        // After initial messages, show TAP TO REPLY
-        if (index === initialMessages.length - 1) {
+        // Clear new status
+        setTimeout(() => setNewMessageIndex(-1), 450);
+        
+        // Show TAP TO REPLY after last message
+        if (index === timings.length - 1) {
           setTimeout(() => {
             setShowTapButton(true);
             setWaitingForReply(true);
-          }, 1200);
+          }, 1600);
         }
-      }, msg.delay + msg.typingDuration);
-      timeouts.push(msgTimeout);
+      }, msg.showMessage));
     });
     
-    return () => timeouts.forEach(t => clearTimeout(t));
+    return () => timeouts.forEach(clearTimeout);
   }, [isActive, phase]);
   
   // After reply messages sequence  
   useEffect(() => {
-    if (!isActive || phase !== 'afterReply') {
-      return;
-    }
+    if (!isActive || phase !== 'afterReply') return;
     
     const timeouts: NodeJS.Timeout[] = [];
+    const timings = getMessageTimings(afterReplyMessages);
+    const baseIndex = messages.length;
     
-    afterReplyMessages.forEach((msg, index) => {
-      // Show typing indicator
-      const typingStartTimeout = setTimeout(() => {
+    timings.forEach((msg, index) => {
+      timeouts.push(setTimeout(() => {
         setIsTyping(true);
         setCurrentTime(msg.time);
-      }, msg.delay);
-      timeouts.push(typingStartTimeout);
+      }, msg.startTyping));
       
-      // Show the actual message after typing duration
-      const msgTimeout = setTimeout(() => {
+      timeouts.push(setTimeout(() => {
         setIsTyping(false);
-        playMessageSound(); // Play message received sound
+        playMessageReceivedSound();
         triggerHaptic('light');
+        setNewMessageIndex(baseIndex + index);
         setMessages(prev => [...prev, { 
           text: msg.text, 
           type: 'incoming',
@@ -874,19 +1124,19 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           showTimestamp: msg.showTimestamp
         }]);
         
-        // After all messages, advance to next slide
-        if (index === afterReplyMessages.length - 1) {
+        setTimeout(() => setNewMessageIndex(-1), 450);
+        
+        if (index === timings.length - 1) {
           setTimeout(() => {
             playSuccessSound();
-            triggerHaptic('success');
+            triggerHaptic('heavy');
             onAdvance?.();
-          }, 2500);
+          }, 3000);
         }
-      }, msg.delay + msg.typingDuration);
-      timeouts.push(msgTimeout);
+      }, msg.showMessage));
     });
     
-    return () => timeouts.forEach(t => clearTimeout(t));
+    return () => timeouts.forEach(clearTimeout);
   }, [isActive, phase, onAdvance]);
   
   // Reset when slide becomes inactive
@@ -898,6 +1148,7 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       setPhase('initial');
       setIsTyping(false);
       setCurrentTime('3:33');
+      setNewMessageIndex(-1);
     }
   }, [isActive]);
   
@@ -906,35 +1157,78 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     
     setShowTapButton(false);
     setWaitingForReply(false);
+    triggerHaptic('medium');
     
-    // Add user's reply with delivered/read states
+    const newIdx = messages.length;
+    setNewMessageIndex(newIdx);
     setMessages(prev => [...prev, { 
       text: "What frequency? 🤔", 
       type: 'sent',
-      delivered: true,
+      delivered: false,
       read: false,
       time: '3:34',
       showTimestamp: true
     }]);
     
-    // Mark as read after a moment
+    // Delivery sequence
     setTimeout(() => {
-      setMessages(prev => prev.map((msg, i) => 
-        i === prev.length - 1 ? { ...msg, read: true } : msg
+      setMessages(prev => prev.map((m, i) => 
+        i === newIdx ? { ...m, delivered: true } : m
       ));
-    }, 600);
+    }, 550);
+    
+    // Read sequence
+    setTimeout(() => {
+      setMessages(prev => prev.map((m, i) => 
+        i === newIdx ? { ...m, read: true } : m
+      ));
+      setNewMessageIndex(-1);
+    }, 1600);
     
     // Start phase 2
-    setTimeout(() => {
-      setPhase('afterReply');
-    }, 1000);
+    setTimeout(() => setPhase('afterReply'), 2100);
   };
   
   return (
     <div className={`absolute inset-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      {/* Enhanced animations */}
+      <style>{`
+        @keyframes typing-appear {
+          0% { opacity: 0; transform: translateY(6px) scale(0.92); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes typing-bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+          30% { transform: translateY(-5px); opacity: 1; }
+        }
+        @keyframes typing-bounce-natural {
+          0%, 100% { transform: translateY(0); opacity: 0.45; }
+          15% { transform: translateY(-1px); opacity: 0.55; }
+          30% { transform: translateY(-5px); opacity: 1; }
+          45% { transform: translateY(-2px); opacity: 0.75; }
+          60% { transform: translateY(0); opacity: 0.5; }
+        }
+        @keyframes message-pop-enhanced {
+          0% { opacity: 0; transform: translateY(14px) scale(0.9); }
+          45% { transform: translateY(-3px) scale(1.015); }
+          70% { transform: translateY(1px) scale(0.995); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes reply-btn-pulse {
+          0%, 100% { 
+            box-shadow: 0 0 18px rgba(10, 132, 255, 0.45), 0 0 35px rgba(10, 132, 255, 0.25);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 0 28px rgba(10, 132, 255, 0.65), 0 0 55px rgba(10, 132, 255, 0.35);
+            transform: scale(1.012);
+          }
+        }
+      `}</style>
+      
       {/* iPhone-style status bar */}
       <div className="bg-[#000000] pt-2 pb-1 px-6 flex justify-between items-center text-white text-xs">
-        <span className="font-semibold">{currentTime}</span>
+        <span className="font-semibold tabular-nums">{currentTime}</span>
         <div className="absolute left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-2xl" />
         <div className="flex items-center gap-1">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -945,7 +1239,7 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           </svg>
           <div className="flex items-center gap-0.5">
             <div className="w-6 h-3 border border-white rounded-sm relative">
-              <div className="absolute inset-0.5 bg-[#00ff88] rounded-[1px]" style={{ width: '80%' }} />
+              <div className="absolute inset-0.5 bg-[#32d74b] rounded-[1px]" style={{ width: '82%' }} />
             </div>
           </div>
         </div>
@@ -953,13 +1247,13 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       
       {/* iMessage header */}
       <div className="bg-[#1c1c1e] px-4 py-3 flex items-center border-b border-gray-700/50">
-        <button className="text-[#0a84ff] text-sm mr-3">
+        <button className="text-[#007aff] text-sm mr-3 min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1 flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00ff88]/50">
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00ff88]/50 flex-shrink-0">
             <img 
               src="./cloaked-messenger-portrait-KakJfYU78kjRavrkE3GIf.png" 
               alt="Contact" 
@@ -967,11 +1261,11 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
             />
           </div>
           <div className="text-center">
-            <p className="text-white font-semibold text-base">Unknown</p>
-            <p className="text-gray-400 text-xs">Maybe: Divine Messenger</p>
+            <p className="text-white font-semibold text-[17px]">Unknown</p>
+            <p className="text-[#8e8e93] text-[12px]">Maybe: Divine Messenger</p>
           </div>
         </div>
-        <button className="text-[#0a84ff]">
+        <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -980,95 +1274,63 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       
       {/* Messages area */}
       <div className="flex-1 bg-[#000000] px-4 py-4 overflow-y-auto scroll-momentum">
-        <div className="max-w-lg mx-auto space-y-1">
+        <div className="max-w-lg mx-auto">
           {/* Date header */}
           <div className="text-center mb-4">
-            <span className="text-gray-500 text-xs bg-gray-800/50 px-3 py-1 rounded-full">Today 3:33 AM</span>
+            <span className="text-[#8e8e93] text-[11px] bg-[#2c2c2e]/60 px-3 py-1 rounded-full">Today 3:33 AM</span>
           </div>
           
           {messages.map((msg, i) => (
             <div key={i}>
-              {/* Timestamp between messages */}
+              {/* Timestamp between messages - realistic time progression */}
               {msg.showTimestamp && i > 0 && (
-                <div className="text-center my-2">
-                  <span className="text-gray-600 text-[10px]">{msg.time} AM</span>
+                <div className="text-center my-3">
+                  <span className="text-[#636366] text-[11px]">{msg.time} AM</span>
                 </div>
               )}
               
-              <div 
-                className={`flex ${msg.type === 'sent' ? 'justify-end' : 'justify-start'}`}
-                style={{
-                  animation: 'message-slide-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }}
-              >
-                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl ${
-                  msg.type === 'sent' 
-                    ? 'bg-[#0a84ff] text-white rounded-br-md' 
-                    : 'bg-[#3a3a3c] text-white rounded-bl-md'
-                }`}>
-                  <p className="text-[15px] leading-snug">{msg.text}</p>
-                </div>
-              </div>
-              
-              {/* Delivered/Read status for sent messages */}
-              {msg.type === 'sent' && (
-                <div className="flex justify-end mt-0.5 mr-1">
-                  <span className="text-[10px] text-gray-500">
-                    {msg.read ? 'Read' : msg.delivered ? 'Delivered' : ''}
-                  </span>
-                </div>
-              )}
+              <MessageBubbleEnhanced 
+                msg={msg} 
+                isNew={i === newMessageIndex}
+                showDelivered={msg.type === 'sent'}
+              />
             </div>
           ))}
           
           {/* Typing indicator */}
-          {isTyping && (
-            <div 
-              className="flex justify-start"
-              style={{ animation: 'message-slide-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-            >
-              <div className="bg-[#3a3a3c] rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
-                </div>
-              </div>
-            </div>
-          )}
+          {isTyping && <RealisticTypingIndicator />}
           
           <div ref={messagesEndRef} />
         </div>
       </div>
       
-      {/* iMessage input bar - shows TAP TO REPLY button when waiting */}
-      <div className="bg-[#1c1c1e] px-4 py-3 border-t border-gray-700/50">
+      {/* iMessage input bar */}
+      <div className="bg-[#1c1c1e] px-4 py-3 border-t border-[#38383a]/50">
         {showTapButton ? (
           <button 
             onClick={() => {
               playTapSound();
-              triggerHaptic('medium');
               handleTapToReply();
             }}
-            className="w-full max-w-lg mx-auto block bg-[#0a84ff] text-white py-3 rounded-full font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[48px]"
+            className="w-full max-w-lg mx-auto block bg-[#007aff] text-white py-3.5 rounded-full font-semibold text-[17px] transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[50px]"
             style={{ 
               transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-              animation: 'pulse-glow 2s ease-in-out infinite'
+              animation: 'reply-btn-pulse 2s ease-in-out infinite'
             }}
           >
             TAP TO REPLY
           </button>
         ) : (
           <div className="flex items-center gap-3 max-w-lg mx-auto">
-            <button className="text-[#0a84ff]">
+            <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center">
               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </button>
-            <div className="flex-1 bg-[#3a3a3c] rounded-full px-4 py-2">
-              <span className="text-gray-400 text-sm">iMessage</span>
+            <div className="flex-1 bg-[#3a3a3c] rounded-full px-4 py-2.5">
+              <span className="text-[#8e8e93] text-[15px]">iMessage</span>
             </div>
-            <button className="text-[#0a84ff]">
+            <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -1086,6 +1348,7 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
   
   const questions = [
     {
@@ -1107,28 +1370,41 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
       setCurrentQuestion(0);
       setAnswers([]);
       setScanning(false);
+      setSelectedOption(null);
     }
   }, [isActive]);
   
-  const handleAnswer = (answer: string) => {
-    const newAnswers = [...answers, answer];
-    setAnswers(newAnswers);
+  const handleAnswer = (answer: string, index: number) => {
+    // Instant visual feedback
+    setSelectedOption(index);
+    playTapSound();
+    triggerHaptic('medium');
     
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
-    } else {
-      setScanning(true);
-      setTimeout(() => {
-        const archetypes = ["Starweaver", "Knowledge Keeper", "Crystal Healer", "Cosmic Warrior"];
-        const counts = [0, 0, 0, 0];
-        newAnswers.forEach((a, i) => {
-          const idx = questions[i].options.indexOf(a);
-          if (idx >= 0) counts[idx]++;
-        });
-        const maxIdx = counts.indexOf(Math.max(...counts));
-        onComplete(archetypes[maxIdx]);
-      }, 3000);
-    }
+    // Small delay before transitioning for visual feedback
+    setTimeout(() => {
+      const newAnswers = [...answers, answer];
+      setAnswers(newAnswers);
+      setSelectedOption(null);
+      
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(prev => prev + 1);
+      } else {
+        setScanning(true);
+        triggerHaptic('heavy');
+        setTimeout(() => {
+          const archetypes = ["Starweaver", "Knowledge Keeper", "Crystal Healer", "Cosmic Warrior"];
+          const counts = [0, 0, 0, 0];
+          newAnswers.forEach((a, i) => {
+            const idx = questions[i].options.indexOf(a);
+            if (idx >= 0) counts[idx]++;
+          });
+          const maxIdx = counts.indexOf(Math.max(...counts));
+          playSuccessSound();
+          triggerHaptic('heavy');
+          onComplete(archetypes[maxIdx]);
+        }, 3000);
+      }
+    }, 180);
   };
   
   if (scanning) {
@@ -1184,20 +1460,27 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
           {questions[currentQuestion].q}
         </h3>
         
-        <div className="space-y-3 pointer-events-auto">
+        {/* Quiz options with physics-based interactions */}
+        <div className="space-y-3 pointer-events-auto scroll-momentum">
           {questions[currentQuestion].options.map((option, i) => (
             <button
               key={i}
               onClick={(e) => {
                 e.stopPropagation();
-                playTapSound();
-                triggerHaptic('medium');
-                handleAnswer(option);
+                handleAnswer(option, i);
               }}
-              className="w-full p-4 rounded-xl bg-purple-900/30 border border-purple-500/30 text-left font-['Rajdhani'] text-white hover:bg-purple-800/40 hover:border-purple-500/50 transition-all duration-200 active:scale-[0.97] hover:scale-[1.01] min-h-[52px]"
-              style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms ease, border-color 200ms ease' }}
+              className={`w-full p-4 rounded-xl border text-left font-['Rajdhani'] text-white transition-all touch-manipulation ${
+                selectedOption === i 
+                  ? 'bg-[#00ff88]/30 border-[#00ff88]/70 scale-[0.97]' 
+                  : 'bg-purple-900/30 border-purple-500/30 hover:bg-purple-800/40 hover:border-purple-500/50'
+              }`}
+              style={{ 
+                transition: 'transform 100ms cubic-bezier(0.34, 1.56, 0.64, 1), background 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
+                minHeight: '56px',
+                boxShadow: selectedOption === i ? '0 0 20px rgba(0, 255, 136, 0.3)' : 'none'
+              }}
             >
-              <span className="text-purple-400 mr-3">◈</span>
+              <span className={`mr-3 transition-colors duration-150 ${selectedOption === i ? 'text-[#00ff88]' : 'text-purple-400'}`}>◈</span>
               {option}
             </button>
           ))}
@@ -1697,6 +1980,8 @@ const Index = () => {
     price: "$197",
     description: "7-Book Series + Academy Access + Crystal Kit"
   });
+  const [rubberBand, setRubberBand] = useState<'left' | 'right' | null>(null);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   
   const totalSlides = 8;
   
@@ -1709,17 +1994,29 @@ const Index = () => {
   
   const goToNextSlide = useCallback(() => {
     if (currentSlide < totalSlides - 1) {
+      setSlideDirection('right');
       setIsAnimating(false);
       setCurrentSlide(prev => prev + 1);
       setTimeout(() => setIsAnimating(true), 100);
+    } else {
+      // Rubber band effect at the end
+      setRubberBand('right');
+      triggerHaptic('light');
+      setTimeout(() => setRubberBand(null), 400);
     }
   }, [currentSlide]);
   
   const goToPrevSlide = useCallback(() => {
     if (currentSlide > 0) {
+      setSlideDirection('left');
       setIsAnimating(false);
       setCurrentSlide(prev => prev - 1);
       setTimeout(() => setIsAnimating(true), 100);
+    } else {
+      // Rubber band effect at the start
+      setRubberBand('left');
+      triggerHaptic('light');
+      setTimeout(() => setRubberBand(null), 400);
     }
   }, [currentSlide]);
   
@@ -1756,9 +2053,18 @@ const Index = () => {
     setTimeout(() => goToNextSlide(), 100);
   };
   
-  // Mobile content
+  // Mobile content with rubber band physics
   const MobileContent = () => (
-    <div className="relative w-full h-screen bg-[#050510] overflow-hidden">
+    <div 
+      className="relative w-full h-screen bg-[#050510] overflow-hidden"
+      style={{
+        animation: rubberBand 
+          ? rubberBand === 'left' 
+            ? 'rubber-band-left 400ms cubic-bezier(0.34, 1.56, 0.64, 1)' 
+            : 'rubber-band-right 400ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+          : 'none'
+      }}
+    >
       <MatrixRain />
       
       {/* Progress bars */}
@@ -1783,7 +2089,7 @@ const Index = () => {
         description: "7-Book Series + Academy Access + Crystal Kit"
       })} />
       
-      {/* Global animations */}
+      {/* Global animations with physics-based effects */}
       <style>{`
         @keyframes cosmic-rotate {
           from { transform: rotate(0deg); }
@@ -1799,6 +2105,11 @@ const Index = () => {
         }
         @keyframes ripple {
           0% { transform: scale(0); opacity: 0.5; }
+          100% { transform: scale(4); opacity: 0; }
+        }
+        @keyframes ripple-expand {
+          0% { transform: scale(0); opacity: 0.6; }
+          70% { opacity: 0.3; }
           100% { transform: scale(4); opacity: 0; }
         }
         @keyframes bounce-subtle {
@@ -1827,16 +2138,49 @@ const Index = () => {
           60% { transform: translateY(-3px) scale(1.01); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
+        
+        /* Enhanced breathing animation with subtle expansion */
         @keyframes breathing {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.03); }
+          0%, 100% { 
+            transform: scale(1); 
+            filter: drop-shadow(0 0 15px rgba(0, 255, 136, 0.3));
+          }
+          50% { 
+            transform: scale(1.035); 
+            filter: drop-shadow(0 0 25px rgba(0, 255, 136, 0.5));
+          }
         }
+        
+        /* Physics-based floating orb animation with varied speeds */
         @keyframes float-orb-slow {
           0%, 100% { transform: translate(0, 0); }
           25% { transform: translate(10px, -15px); }
           50% { transform: translate(-5px, -8px); }
           75% { transform: translate(-15px, -5px); }
         }
+        
+        /* New parallax float animation for background elements */
+        @keyframes parallax-float {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          25% { transform: translate3d(15px, -20px, 0) scale(1.02); }
+          50% { transform: translate3d(-8px, -35px, 0) scale(1); }
+          75% { transform: translate3d(-20px, -15px, 0) scale(0.98); }
+        }
+        
+        /* Subtle depth-based parallax for layered backgrounds */
+        @keyframes parallax-layer-1 {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(5px, -8px, 0); }
+        }
+        @keyframes parallax-layer-2 {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(-8px, -12px, 0); }
+        }
+        @keyframes parallax-layer-3 {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(12px, -18px, 0); }
+        }
+        
         @keyframes pulse-border {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 1; }
@@ -1845,11 +2189,113 @@ const Index = () => {
           0%, 100% { opacity: 0.4; transform: scale(1); }
           50% { opacity: 0.7; transform: scale(1.05); }
         }
+        
+        /* Physics-based spring animation for slide transitions */
+        @keyframes slide-in-spring {
+          0% { 
+            opacity: 0; 
+            transform: translateX(100%) scale(0.95); 
+          }
+          60% { 
+            transform: translateX(-2%) scale(1.01); 
+          }
+          80% { 
+            transform: translateX(1%) scale(0.995); 
+          }
+          100% { 
+            opacity: 1; 
+            transform: translateX(0) scale(1); 
+          }
+        }
+        
+        @keyframes slide-out-spring {
+          0% { 
+            opacity: 1; 
+            transform: translateX(0) scale(1); 
+          }
+          40% { 
+            transform: translateX(2%) scale(0.995); 
+          }
+          100% { 
+            opacity: 0; 
+            transform: translateX(-100%) scale(0.95); 
+          }
+        }
+        
+        /* Rubber band effect for boundary interactions */
+        @keyframes rubber-band {
+          0% { transform: scale(1); }
+          30% { transform: scale(1.05, 0.95); }
+          40% { transform: scale(0.95, 1.05); }
+          50% { transform: scale(1.02, 0.98); }
+          65% { transform: scale(0.98, 1.02); }
+          75% { transform: scale(1.01, 0.99); }
+          100% { transform: scale(1); }
+        }
+        
+        /* Rubber band for left/right boundary hit */
+        @keyframes rubber-band-left {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(25px); }
+          50% { transform: translateX(-8px); }
+          75% { transform: translateX(3px); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes rubber-band-right {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-25px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-3px); }
+          100% { transform: translateX(0); }
+        }
+        
+        /* Enhanced hover lift effect with shadow */
+        @keyframes lift-hover {
+          from {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+          to {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25), 0 0 15px rgba(0, 255, 136, 0.15);
+          }
+        }
+        
+        /* Expo easing curves for physics-based feel */
         .ease-out-expo {
           transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
         }
         .ease-in-out-expo {
           transition-timing-function: cubic-bezier(0.87, 0, 0.13, 1);
+        }
+        .ease-out-back {
+          transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .ease-spring {
+          transition-timing-function: cubic-bezier(0.5, 1.8, 0.3, 1);
+        }
+        
+        /* Physics-based button interactions */
+        .physics-button {
+          transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .physics-button:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 255, 136, 0.2);
+        }
+        .physics-button:active {
+          transform: translateY(1px) scale(0.98);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transition-duration: 0.1s;
+        }
+        
+        /* Interactive card with lift effect */
+        .card-lift {
+          transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .card-lift:hover {
+          transform: translateY(-6px) scale(1.01);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 0 30px rgba(0, 255, 136, 0.1);
         }
         
         /* Touch target optimization for mobile */
@@ -1878,6 +2324,12 @@ const Index = () => {
         /* Fast touch response */
         button, a, [role="button"], .interactive {
           touch-action: manipulation;
+        }
+        
+        /* Smooth transition for all animated elements */
+        .animate-physics {
+          will-change: transform, opacity;
+          backface-visibility: hidden;
         }
       `}</style>
     </div>
