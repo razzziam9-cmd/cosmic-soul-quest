@@ -11,48 +11,55 @@ const MatrixRain = () => {
 };
 
 // Product information mapping
-const productInfo: Record<string, { name: string; type: "book" | "academy" | "bundle"; description: string; icon: string }> = {
+const productInfo: Record<string, { name: string; type: "book" | "academy" | "bundle"; description: string; icon: string; hasDigitalDownload: boolean }> = {
   book_digital: {
     name: "Cosmic Soul Quest - Digital",
     type: "book",
     description: "Your digital copy is ready for download. Begin your journey through the cosmos.",
-    icon: "📱"
+    icon: "📱",
+    hasDigitalDownload: true
   },
   book_paperback: {
     name: "Cosmic Soul Quest - Paperback",
     type: "book",
     description: "Your paperback edition is on its way. Expect delivery within 5-7 days.",
-    icon: "📚"
+    icon: "📚",
+    hasDigitalDownload: false
   },
   book_collector: {
     name: "Cosmic Soul Quest - Collector's Edition",
     type: "book",
-    description: "Your exclusive Collector's Edition with premium materials is being prepared.",
-    icon: "✨"
+    description: "Your exclusive Collector's Edition with premium materials is being prepared. Digital version included!",
+    icon: "✨",
+    hasDigitalDownload: true
   },
   academy_initiate: {
     name: "Academy - Initiate Path",
     type: "academy",
     description: "Welcome, Initiate. Your training begins now. Access the portal below.",
-    icon: "🌟"
+    icon: "🌟",
+    hasDigitalDownload: false
   },
   academy_warrior: {
     name: "Academy - Warrior Path",
     type: "academy",
     description: "Warrior, you've chosen the path of power. Advanced training awaits.",
-    icon: "⚔️"
+    icon: "⚔️",
+    hasDigitalDownload: false
   },
   academy_master: {
     name: "Academy - Master Path",
     type: "academy",
     description: "Master, the highest secrets are now within your reach. Ascend.",
-    icon: "👁️"
+    icon: "👁️",
+    hasDigitalDownload: false
   },
   awakening_bundle: {
     name: "Complete Awakening Bundle",
     type: "bundle",
     description: "You've unlocked the full cosmic experience. Book series, Academy access, and Crystal Kit are all yours.",
-    icon: "💎"
+    icon: "💎",
+    hasDigitalDownload: true
   }
 };
 
@@ -60,6 +67,7 @@ const SuccessPage = () => {
   const [, navigate] = useLocation();
   const [productId, setProductId] = useState<string | null>(null);
   const [showContent, setShowContent] = useState(false);
+  const [downloadPulse, setDownloadPulse] = useState(true);
   
   useEffect(() => {
     // Get product from URL params
@@ -69,9 +77,27 @@ const SuccessPage = () => {
     
     // Animate in content
     setTimeout(() => setShowContent(true), 300);
+    
+    // Pulse download button periodically
+    const pulseInterval = setInterval(() => {
+      setDownloadPulse(prev => !prev);
+    }, 2000);
+    
+    return () => clearInterval(pulseInterval);
   }, []);
   
   const product = productId ? productInfo[productId] : null;
+  const showDownloadButton = product?.hasDigitalDownload || product?.type === "bundle";
+  
+  const handleDownload = () => {
+    // Create download link
+    const link = document.createElement("a");
+    link.href = "./cosmic-soul-quest-book.pdf";
+    link.download = "Cosmic-Soul-Quest-Book.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   
   return (
     <div className="min-h-screen bg-[#050510] text-white overflow-hidden">
@@ -117,6 +143,63 @@ const SuccessPage = () => {
           </div>
         )}
         
+        {/* PROMINENT DOWNLOAD SECTION for digital products */}
+        {showDownloadButton && (
+          <div className="w-full max-w-md mb-8">
+            <div className="relative">
+              {/* Glowing background effect */}
+              <div className={`absolute -inset-2 bg-gradient-to-r from-[#00ff88]/30 via-cyan-400/30 to-purple-500/30 rounded-3xl blur-xl transition-opacity duration-1000 ${downloadPulse ? 'opacity-100' : 'opacity-50'}`} />
+              
+              <div className="relative bg-gradient-to-b from-[#0a0a2e] to-[#0a0a1f] border-2 border-[#00ff88]/50 rounded-2xl p-6 backdrop-blur-sm">
+                {/* Header */}
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="text-2xl">📖</span>
+                  <h3 className="font-['Orbitron'] text-lg text-[#00ff88] tracking-wide">
+                    YOUR BOOK IS READY!
+                  </h3>
+                  <span className="text-2xl">✨</span>
+                </div>
+                
+                <p className="font-['Rajdhani'] text-center text-zinc-300 mb-5">
+                  Click below to download your copy of <span className="text-[#00ff88]">Cosmic Soul Quest</span>. 
+                  Your awakening journey begins now.
+                </p>
+                
+                {/* Download button */}
+                <button 
+                  onClick={handleDownload}
+                  className={`relative w-full py-4 font-['Orbitron'] text-base font-bold text-white rounded-xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] uppercase tracking-wider flex items-center justify-center gap-3 overflow-hidden group ${downloadPulse ? 'shadow-[0_0_40px_rgba(0,255,136,0.4)]' : 'shadow-[0_0_20px_rgba(0,255,136,0.2)]'}`}
+                  style={{
+                    background: "linear-gradient(135deg, #00ff88 0%, #00d4aa 30%, #8b5cf6 70%, #a855f7 100%)"
+                  }}
+                >
+                  {/* Shine effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                  
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>Download Your Book Now</span>
+                </button>
+                
+                {/* File info */}
+                <div className="flex items-center justify-center gap-4 mt-4 text-xs text-zinc-500">
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                    </svg>
+                    PDF Format
+                  </span>
+                  <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                  <span>Instant Download</span>
+                  <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                  <span>Read Anywhere</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Order confirmation box */}
         <div className="w-full max-w-md bg-[#0a0a1f]/80 border border-[#00ff88]/30 rounded-2xl p-6 backdrop-blur-sm mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -134,13 +217,19 @@ const SuccessPage = () => {
               <span className="font-['Rajdhani'] text-zinc-500">Payment</span>
               <span className="font-['Rajdhani'] text-[#00ff88]">✓ Processed</span>
             </div>
-            {product?.type === "book" && (
+            {showDownloadButton && (
               <div className="flex justify-between items-center">
-                <span className="font-['Rajdhani'] text-zinc-500">Access</span>
-                <span className="font-['Rajdhani'] text-[#00ff88]">✓ Ready</span>
+                <span className="font-['Rajdhani'] text-zinc-500">Digital Book</span>
+                <span className="font-['Rajdhani'] text-[#00ff88]">✓ Ready to Download</span>
               </div>
             )}
-            {product?.type === "academy" && (
+            {product?.type === "book" && !product.hasDigitalDownload && (
+              <div className="flex justify-between items-center">
+                <span className="font-['Rajdhani'] text-zinc-500">Shipping</span>
+                <span className="font-['Rajdhani'] text-amber-400">⏳ Processing</span>
+              </div>
+            )}
+            {(product?.type === "academy" || product?.type === "bundle") && (
               <div className="flex justify-between items-center">
                 <span className="font-['Rajdhani'] text-zinc-500">Academy Access</span>
                 <span className="font-['Rajdhani'] text-[#00ff88]">✓ Activated</span>
@@ -148,19 +237,12 @@ const SuccessPage = () => {
             )}
           </div>
           
-          {/* Action buttons */}
+          {/* Additional action buttons for non-digital purchases */}
           <div className="space-y-3">
-            {(product?.type === "book" || product?.type === "bundle") && (
-              <button className="w-full py-3 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider flex items-center justify-center gap-2">
-                <span>📖</span>
-                Download Book
-              </button>
-            )}
-            
             {(product?.type === "academy" || product?.type === "bundle") && (
               <button className="w-full py-3 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-amber-500/80 via-yellow-500/80 to-amber-600/80 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider flex items-center justify-center gap-2">
                 <span>🎓</span>
-                Access Academy
+                Access Academy Portal
               </button>
             )}
           </div>
@@ -172,10 +254,18 @@ const SuccessPage = () => {
             NEXT STEPS
           </h3>
           <div className="space-y-3">
+            {showDownloadButton && (
+              <div className="flex items-start gap-3 p-3 bg-[#00ff88]/5 rounded-xl border border-[#00ff88]/30">
+                <span className="text-lg">⬇️</span>
+                <p className="font-['Rajdhani'] text-sm text-zinc-300">
+                  <span className="text-[#00ff88] font-bold">Download your book now</span> using the button above. Your awakening awaits!
+                </p>
+              </div>
+            )}
             <div className="flex items-start gap-3 p-3 bg-[#0a0a1f]/50 rounded-xl border border-purple-500/20">
               <span className="text-lg">📧</span>
               <p className="font-['Rajdhani'] text-sm text-zinc-400">
-                Check your email for confirmation and access details
+                Check your email for confirmation and additional access details
               </p>
             </div>
             <div className="flex items-start gap-3 p-3 bg-[#0a0a1f]/50 rounded-xl border border-purple-500/20">
