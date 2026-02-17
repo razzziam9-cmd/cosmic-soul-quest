@@ -195,6 +195,197 @@ const playAffirmationSound = () => {
   }
 };
 
+// ===========================================
+// AMBIENT SOUND SYSTEM - "Hacked" atmosphere
+// ===========================================
+interface AmbientSoundNodes {
+  whiteNoise: AudioBufferSourceNode | null;
+  lowHum: OscillatorNode | null;
+  highFreq: OscillatorNode | null;
+  masterGain: GainNode | null;
+  noiseGain: GainNode | null;
+  humGain: GainNode | null;
+  highGain: GainNode | null;
+  filter: BiquadFilterNode | null;
+}
+
+let ambientNodes: AmbientSoundNodes = {
+  whiteNoise: null,
+  lowHum: null,
+  highFreq: null,
+  masterGain: null,
+  noiseGain: null,
+  humGain: null,
+  highGain: null,
+  filter: null
+};
+let ambientStarted = false;
+
+// Create white noise buffer
+const createNoiseBuffer = (ctx: AudioContext, duration: number) => {
+  const sampleRate = ctx.sampleRate;
+  const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
+  const data = buffer.getChannelData(0);
+  
+  for (let i = 0; i < data.length; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  
+  return buffer;
+};
+
+// Start ambient background sounds
+const startAmbientSound = () => {
+  if (ambientStarted || isMuted) return;
+  
+  try {
+    const ctx = getAudioContext();
+    
+    // Master gain for overall volume control
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.15, ctx.currentTime); // Low overall volume
+    masterGain.connect(ctx.destination);
+    ambientNodes.masterGain = masterGain;
+    
+    // 1. White noise / static layer
+    const noiseBuffer = createNoiseBuffer(ctx, 2);
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.08, ctx.currentTime);
+    
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(2000, ctx.currentTime);
+    
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSource.start();
+    
+    ambientNodes.whiteNoise = noiseSource;
+    ambientNodes.noiseGain = noiseGain;
+    ambientNodes.filter = noiseFilter;
+    
+    // 2. Low electronic hum layer
+    const lowHum = ctx.createOscillator();
+    lowHum.type = 'sine';
+    lowHum.frequency.setValueAtTime(60, ctx.currentTime);
+    
+    const humGain = ctx.createGain();
+    humGain.gain.setValueAtTime(0.04, ctx.currentTime);
+    
+    lowHum.connect(humGain);
+    humGain.connect(masterGain);
+    lowHum.start();
+    
+    ambientNodes.lowHum = lowHum;
+    ambientNodes.humGain = humGain;
+    
+    // 3. High frequency digital layer (subtle)
+    const highFreq = ctx.createOscillator();
+    highFreq.type = 'square';
+    highFreq.frequency.setValueAtTime(8000, ctx.currentTime);
+    
+    const highGain = ctx.createGain();
+    highGain.gain.setValueAtTime(0.008, ctx.currentTime);
+    
+    const highFilter = ctx.createBiquadFilter();
+    highFilter.type = 'lowpass';
+    highFilter.frequency.setValueAtTime(10000, ctx.currentTime);
+    
+    highFreq.connect(highFilter);
+    highFilter.connect(highGain);
+    highGain.connect(masterGain);
+    highFreq.start();
+    
+    ambientNodes.highFreq = highFreq;
+    ambientNodes.highGain = highGain;
+    
+    // 4. Periodic glitch sounds
+    const scheduleGlitch = () => {
+      if (!ambientStarted || isMuted) return;
+      
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      
+      // Random glitch burst
+      const glitchOsc = ctx.createOscillator();
+      const glitchGain = ctx.createGain();
+      
+      glitchOsc.type = 'sawtooth';
+      glitchOsc.frequency.setValueAtTime(100 + Math.random() * 500, now);
+      glitchOsc.frequency.exponentialRampToValueAtTime(50 + Math.random() * 200, now + 0.1);
+      
+      glitchGain.gain.setValueAtTime(0.03, now);
+      glitchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      
+      glitchOsc.connect(glitchGain);
+      glitchGain.connect(masterGain);
+      
+      glitchOsc.start(now);
+      glitchOsc.stop(now + 0.15);
+      
+      // Schedule next glitch (random interval 3-8 seconds)
+      setTimeout(scheduleGlitch, 3000 + Math.random() * 5000);
+    };
+    
+    // Start glitch schedule after 2 seconds
+    setTimeout(scheduleGlitch, 2000);
+    
+    ambientStarted = true;
+  } catch {
+    // Audio not supported
+  }
+};
+
+// Stop ambient sounds
+const stopAmbientSound = () => {
+  if (!ambientStarted) return;
+  
+  try {
+    if (ambientNodes.whiteNoise) {
+      ambientNodes.whiteNoise.stop();
+      ambientNodes.whiteNoise = null;
+    }
+    if (ambientNodes.lowHum) {
+      ambientNodes.lowHum.stop();
+      ambientNodes.lowHum = null;
+    }
+    if (ambientNodes.highFreq) {
+      ambientNodes.highFreq.stop();
+      ambientNodes.highFreq = null;
+    }
+    ambientNodes.masterGain = null;
+    ambientNodes.noiseGain = null;
+    ambientNodes.humGain = null;
+    ambientNodes.highGain = null;
+    ambientNodes.filter = null;
+    ambientStarted = false;
+  } catch {
+    // Audio cleanup failed
+  }
+};
+
+// Set ambient volume
+const setAmbientVolume = (volume: number) => {
+  if (ambientNodes.masterGain) {
+    const ctx = getAudioContext();
+    ambientNodes.masterGain.gain.setValueAtTime(volume, ctx.currentTime);
+  }
+};
+
+// Toggle ambient mute state
+const toggleAmbientMute = (mute: boolean) => {
+  if (mute) {
+    stopAmbientSound();
+  } else {
+    startAmbientSound();
+  }
+};
+
 // Haptic feedback helper with pattern support
 const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') => {
   if ('vibrate' in navigator) {
@@ -1891,119 +2082,160 @@ const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBo
   );
 };
 
-// SLIDE 7: Academy with Stripe Subscription Buttons
-const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAcademyCheckout: (productId: string, product: {name: string; price: string; description: string}) => void }) => {
-  const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
+// SLIDE 7: TOP SECRET Academy Teaser (Classified style)
+const AcademySlide = ({ isActive }: { isActive: boolean }) => {
+  const [revealed, setRevealed] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [glitchText, setGlitchText] = useState(false);
   
-  const handleAcademySubscribe = async (productId: string, name: string, price: string) => {
-    setLoadingProduct(productId);
-    const checkoutUrl = await initiateCheckout(productId);
-    if (checkoutUrl) {
-      window.location.href = checkoutUrl;
+  useEffect(() => {
+    if (isActive) {
+      // Reveal sequence
+      setTimeout(() => setRevealed(true), 300);
+      setTimeout(() => setScanComplete(true), 1500);
+      
+      // Random glitch effect
+      const glitchInterval = setInterval(() => {
+        if (Math.random() > 0.7) {
+          setGlitchText(true);
+          setTimeout(() => setGlitchText(false), 150);
+        }
+      }, 2000);
+      
+      return () => clearInterval(glitchInterval);
     } else {
-      setLoadingProduct(null);
-      // Fallback to modal
-      onAcademyCheckout(productId, { name, price, description: "Monthly subscription to Galactic Star Crystal Academy" });
+      setRevealed(false);
+      setScanComplete(false);
     }
-  };
+  }, [isActive]);
   
   return (
     <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      {/* Dark classified background */}
+      <div className="absolute inset-0 bg-[#030308]" />
+      
+      {/* Subtle grid pattern */}
       <div 
-        className="absolute inset-0"
+        className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: "url('./mystical-physics-symbols-lYqViB_x7rGKlaTO5WzCY.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+          backgroundSize: '50px 50px'
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/95 via-[#050510]/85 to-[#050510]/95" />
       
-      <div className="relative z-10 max-w-lg mx-auto text-center">
-        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-bold mb-3"
-          style={{ textShadow: "0 0 40px rgba(255, 200, 0, 0.3)" }}
-        >
-          GALACTIC STAR CRYSTAL<br/>ACADEMY
-        </h2>
-        
-        <p className="font-['Rajdhani'] text-sm text-zinc-300 mb-4">
-          Advanced training for awakened souls. Learn the <span className="text-amber-300">seven secret steps</span> to remember who you truly are.
-        </p>
-        
-        {/* Pricing tiers */}
-        <div className="grid grid-cols-3 gap-2 mb-4 pointer-events-auto">
-          {/* Initiate */}
-          <button
-            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_initiate', 'Initiate Path', '$47/mo'); }}
-            disabled={loadingProduct !== null}
-            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-purple-500/60 disabled:opacity-50 min-h-[100px]"
-            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
+      {/* Scan line effect on reveal */}
+      {revealed && !scanComplete && (
+        <div 
+          className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/60 to-transparent z-20"
+          style={{ animation: 'scan-line-classified 1.2s linear' }}
+        />
+      )}
+      
+      <div className={`relative z-10 max-w-lg mx-auto text-center transition-all duration-1000 ${revealed ? 'opacity-100' : 'opacity-0'}`}>
+        {/* TOP SECRET stamp */}
+        <div className="mb-8 relative">
+          <div 
+            className={`inline-block px-6 py-3 border-4 border-red-600 bg-transparent rotate-[-3deg] transition-all duration-300 ${glitchText ? 'translate-x-1' : ''}`}
+            style={{ 
+              boxShadow: '0 0 20px rgba(255, 0, 0, 0.3)',
+            }}
           >
-            <span className="block text-lg mb-1">🌟</span>
-            <span className="block font-['Orbitron'] text-purple-300 text-xs font-bold">$47</span>
-            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
-            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Initiate</span>
-            {loadingProduct === 'academy_initiate' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
-          </button>
-          
-          {/* Warrior - Featured */}
-          <button
-            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_warrior', 'Warrior Path', '$97/mo'); }}
-            disabled={loadingProduct !== null}
-            className="bg-gradient-to-br from-purple-900/60 via-[#0a0a2e] to-cyan-900/40 border-2 border-[#00ff88]/50 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-[#00ff88]/70 disabled:opacity-50 relative min-h-[100px]"
-            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
-          >
-            <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#00ff88] text-black text-[8px] font-['Orbitron'] px-2 py-0.5 rounded-full">POPULAR</span>
-            <span className="block text-lg mb-1">⚔️</span>
-            <span className="block font-['Orbitron'] text-[#00ff88] text-xs font-bold">$97</span>
-            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
-            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Warrior</span>
-            {loadingProduct === 'academy_warrior' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
-          </button>
-          
-          {/* Master */}
-          <button
-            onClick={(e) => { e.stopPropagation(); playTapSound(); triggerHaptic('medium'); handleAcademySubscribe('academy_master', 'Master Path', '$197/mo'); }}
-            disabled={loadingProduct !== null}
-            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-[1.03] active:scale-[0.97] hover:border-amber-500/70 disabled:opacity-50 min-h-[100px]"
-            style={{ transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms ease' }}
-          >
-            <span className="block text-lg mb-1">👁️</span>
-            <span className="block font-['Orbitron'] text-amber-300 text-xs font-bold">$197</span>
-            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
-            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Master</span>
-            {loadingProduct === 'academy_master' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
-          </button>
+            <span className="font-['Orbitron'] text-2xl md:text-3xl text-red-600 font-black tracking-[0.2em]">
+              TOP SECRET
+            </span>
+          </div>
         </div>
         
-        {/* Features summary */}
-        <div className="bg-[#0a0a1f]/60 border border-purple-500/20 rounded-xl p-3 mb-4">
-          <p className="font-['Rajdhani'] text-xs text-zinc-400">
-            <span className="text-[#00ff88]">✦</span> Advanced frequency training • <span className="text-[#00ff88]">✦</span> 1-on-1 guidance • <span className="text-[#00ff88]">✦</span> Crystal activation
+        {/* Clearance Level */}
+        <div className={`mb-6 transition-all duration-500 ${scanComplete ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#0a0a1a] border border-amber-500/30 rounded">
+            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            <span className="font-['Orbitron'] text-amber-500 text-xs tracking-[0.3em]">
+              CLEARANCE LEVEL: COSMIC
+            </span>
+            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+          </div>
+        </div>
+        
+        {/* Main text with redacted elements */}
+        <div className={`space-y-4 mb-8 transition-all duration-700 delay-300 ${scanComplete ? 'opacity-100' : 'opacity-0'}`}>
+          <p className={`font-['Rajdhani'] text-lg text-zinc-400 leading-relaxed ${glitchText ? 'translate-x-[-2px] text-red-400' : ''}`} style={{ transition: 'all 50ms' }}>
+            There is more...
+          </p>
+          <p className="font-['Rajdhani'] text-base text-zinc-500">
+            but you're <span className="bg-zinc-800 text-zinc-800 px-2 mx-1">not yet</span> ready.
+          </p>
+          <p className="font-['Rajdhani'] text-sm text-zinc-600">
+            Only souls operating at the <span className="text-amber-400">highest frequency</span>
+            <br />will receive the next transmission.
           </p>
         </div>
         
-        <div className="flex justify-center gap-4 opacity-50 mb-4">
-          {["☉", "☽", "✧", "◈", "✧", "☽", "☉"].map((symbol, i) => (
-            <span 
-              key={i}
-              className="text-amber-400 text-sm animate-pulse"
-              style={{ animationDelay: `${i * 0.2}s` }}
+        {/* Classified Academy Name */}
+        <div className={`mb-8 transition-all duration-700 delay-500 ${scanComplete ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative inline-block">
+            {/* Redaction bars */}
+            <div className="absolute -left-4 top-1/2 w-full h-4 bg-zinc-900 -rotate-1" />
+            <div className="absolute -left-2 top-1/2 w-[110%] h-3 bg-zinc-800 rotate-1" />
+            
+            {/* Partially visible text */}
+            <h2 
+              className="font-['Cinzel'] text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300/50 via-yellow-200/50 to-amber-400/50 font-bold relative z-10"
+              style={{ 
+                textShadow: "0 0 30px rgba(255, 200, 0, 0.2)",
+                filter: 'blur(1px)'
+              }}
             >
-              {symbol}
-            </span>
-          ))}
+              GALACTIC STAR CRYSTAL
+              <br />
+              ACADEMY
+            </h2>
+          </div>
         </div>
         
-        <div className="mt-2 animate-pulse">
-          <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
+        {/* ACCESS RESTRICTED stamp */}
+        <div className={`mb-6 transition-all duration-700 delay-700 ${scanComplete ? 'opacity-100' : 'opacity-0'}`}>
+          <div 
+            className="inline-block px-4 py-2 border-2 border-dashed border-red-900 rotate-[2deg]"
+          >
+            <span className="font-['Orbitron'] text-sm text-red-900 tracking-[0.15em]">
+              ◈ ACCESS RESTRICTED ◈
+            </span>
+          </div>
+        </div>
+        
+        {/* Coming soon message */}
+        <div className={`transition-all duration-700 delay-900 ${scanComplete ? 'opacity-100' : 'opacity-0'}`}>
+          <p className="font-['Rajdhani'] text-xs text-zinc-600 tracking-wider">
+            Coming for the <span className="text-cyan-500">chosen few</span>
+          </p>
+          <div className="flex justify-center gap-2 mt-4 opacity-40">
+            {["◆", "◇", "◆", "◇", "◆"].map((s, i) => (
+              <span key={i} className="text-red-900 text-xs animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        {/* TAP TO CONTINUE */}
+        <div className="mt-8 animate-pulse">
+          <div className="inline-flex items-center gap-2 text-white/30 font-['Rajdhani'] text-sm">
             <span>TAP TO CONTINUE</span>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
         </div>
       </div>
+      
+      {/* Classified CSS */}
+      <style>{`
+        @keyframes scan-line-classified {
+          0% { top: 0; opacity: 0.8; }
+          100% { top: 100%; opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -2134,36 +2366,345 @@ const FinalCTASlide = ({ isActive, onCheckout }: { isActive: boolean; onCheckout
   );
 };
 
-// Phone frame wrapper for desktop
-const PhoneFrame = ({ children }: { children: React.ReactNode }) => {
+// Screen corruption/glitch effects for "hacked" appearance
+const ScreenCorruptionEffects = () => {
+  const [glitchFrame, setGlitchFrame] = useState(0);
+  const [showScanLine, setShowScanLine] = useState(false);
+  const [staticIntensity, setStaticIntensity] = useState(0.3);
+  const [screenFlicker, setScreenFlicker] = useState(false);
+  const [chromaticAberration, setChromaticAberration] = useState(false);
+  const [fullGlitch, setFullGlitch] = useState(false);
+  const [glitchBars, setGlitchBars] = useState<{top: number; height: number}[]>([]);
+  
+  // Random glitch triggers
+  useEffect(() => {
+    const glitchInterval = setInterval(() => {
+      if (Math.random() > 0.85) {
+        setGlitchFrame(prev => (prev + 1) % 5);
+        setTimeout(() => setGlitchFrame(0), 150);
+      }
+    }, 2000);
+    
+    const scanLineInterval = setInterval(() => {
+      if (Math.random() > 0.7) {
+        setShowScanLine(true);
+        setTimeout(() => setShowScanLine(false), 800);
+      }
+    }, 4000);
+    
+    const staticInterval = setInterval(() => {
+      setStaticIntensity(0.2 + Math.random() * 0.3);
+    }, 100);
+    
+    // Screen flicker - quick flash effect
+    const flickerInterval = setInterval(() => {
+      if (Math.random() > 0.92) {
+        setScreenFlicker(true);
+        setTimeout(() => setScreenFlicker(false), 50);
+        // Sometimes double flicker
+        if (Math.random() > 0.5) {
+          setTimeout(() => {
+            setScreenFlicker(true);
+            setTimeout(() => setScreenFlicker(false), 30);
+          }, 100);
+        }
+      }
+    }, 3000);
+    
+    // Chromatic aberration (RGB split) effect
+    const chromaticInterval = setInterval(() => {
+      if (Math.random() > 0.9) {
+        setChromaticAberration(true);
+        setTimeout(() => setChromaticAberration(false), 200);
+      }
+    }, 5000);
+    
+    // Full screen glitch with horizontal displacement bars
+    const fullGlitchInterval = setInterval(() => {
+      if (Math.random() > 0.95) {
+        // Generate random glitch bars
+        const bars = Array.from({ length: Math.floor(Math.random() * 5) + 2 }, () => ({
+          top: Math.random() * 100,
+          height: Math.random() * 3 + 1
+        }));
+        setGlitchBars(bars);
+        setFullGlitch(true);
+        setTimeout(() => {
+          setFullGlitch(false);
+          setGlitchBars([]);
+        }, 150);
+      }
+    }, 4000);
+    
+    return () => {
+      clearInterval(glitchInterval);
+      clearInterval(scanLineInterval);
+      clearInterval(staticInterval);
+      clearInterval(flickerInterval);
+      clearInterval(chromaticInterval);
+      clearInterval(fullGlitchInterval);
+    };
+  }, []);
+  
   return (
-    <div className="hidden lg:flex items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#050510] to-[#0a0a2e] p-8">
-      {/* Phone device frame */}
-      <div className="relative">
-        {/* Phone outer frame */}
-        <div className="relative w-[390px] h-[844px] bg-[#1a1a1a] rounded-[55px] p-3 shadow-2xl border border-gray-700/50">
-          {/* Phone inner bezel */}
-          <div className="relative w-full h-full bg-black rounded-[45px] overflow-hidden">
-            {/* Dynamic island / notch */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-28 h-8 bg-black rounded-full z-50" />
-            
-            {/* Screen content */}
-            <div className="relative w-full h-full">
-              {children}
-            </div>
-            
-            {/* Home indicator */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full z-50" />
-          </div>
+    <>
+      {/* Full screen flicker overlay */}
+      {screenFlicker && (
+        <div className="fixed inset-0 z-[80] pointer-events-none bg-white/15" />
+      )}
+      
+      {/* Full screen glitch displacement effect */}
+      {fullGlitch && (
+        <div className="fixed inset-0 z-[75] pointer-events-none overflow-hidden">
+          {glitchBars.map((bar, i) => (
+            <div 
+              key={i}
+              className="absolute left-0 right-0 bg-gradient-to-r from-cyan-500/20 via-red-500/20 to-green-500/20"
+              style={{
+                top: `${bar.top}%`,
+                height: `${bar.height}%`,
+                transform: `translateX(${Math.random() > 0.5 ? '' : '-'}${Math.random() * 10 + 5}px)`,
+              }}
+            />
+          ))}
         </div>
-        
-        {/* Reflection effect */}
-        <div className="absolute inset-0 rounded-[55px] bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-        
-        {/* Ambient glow */}
-        <div className="absolute -inset-20 bg-gradient-to-r from-purple-600/20 via-[#00ff88]/10 to-cyan-500/20 blur-3xl -z-10 animate-pulse" />
+      )}
+      
+      {/* CRT scanlines overlay */}
+      <div 
+        className="fixed inset-0 z-[56] pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
+        }}
+      />
+      
+      {/* Edge corruption effects - top */}
+      <div className="fixed top-0 left-0 right-0 h-8 z-[60] pointer-events-none overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-gradient-to-b from-[#00ff88]/10 to-transparent"
+          style={{ 
+            opacity: staticIntensity,
+            animation: 'corruption-flicker 0.1s steps(2) infinite'
+          }}
+        />
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            opacity: staticIntensity * 0.4,
+            mixBlendMode: 'overlay'
+          }}
+        />
       </div>
-    </div>
+      
+      {/* Edge corruption effects - bottom */}
+      <div className="fixed bottom-0 left-0 right-0 h-8 z-[60] pointer-events-none overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent"
+          style={{ opacity: staticIntensity }}
+        />
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            opacity: staticIntensity * 0.4,
+            mixBlendMode: 'overlay'
+          }}
+        />
+      </div>
+      
+      {/* Edge corruption effects - left */}
+      <div className="fixed top-0 left-0 bottom-0 w-6 z-[60] pointer-events-none overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent"
+          style={{ opacity: staticIntensity }}
+        />
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            opacity: staticIntensity * 0.5,
+            mixBlendMode: 'overlay'
+          }}
+        />
+      </div>
+      
+      {/* Edge corruption effects - right */}
+      <div className="fixed top-0 right-0 bottom-0 w-6 z-[60] pointer-events-none overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-gradient-to-l from-[#00ff88]/10 to-transparent"
+          style={{ opacity: staticIntensity }}
+        />
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            opacity: staticIntensity * 0.5,
+            mixBlendMode: 'overlay'
+          }}
+        />
+      </div>
+      
+      {/* Corner glitch blocks */}
+      <div 
+        className="fixed top-0 left-0 w-16 h-16 z-[60] pointer-events-none"
+        style={{
+          background: glitchFrame === 1 ? 'rgba(0, 255, 136, 0.2)' : 'transparent',
+          transition: 'background 50ms'
+        }}
+      />
+      <div 
+        className="fixed top-0 right-0 w-12 h-20 z-[60] pointer-events-none"
+        style={{
+          background: glitchFrame === 2 ? 'rgba(255, 0, 100, 0.15)' : 'transparent',
+          transition: 'background 50ms'
+        }}
+      />
+      <div 
+        className="fixed bottom-0 left-0 w-20 h-12 z-[60] pointer-events-none"
+        style={{
+          background: glitchFrame === 3 ? 'rgba(0, 200, 255, 0.15)' : 'transparent',
+          transition: 'background 50ms'
+        }}
+      />
+      <div 
+        className="fixed bottom-0 right-0 w-14 h-14 z-[60] pointer-events-none"
+        style={{
+          background: glitchFrame === 4 ? 'rgba(150, 0, 255, 0.2)' : 'transparent',
+          transition: 'background 50ms'
+        }}
+      />
+      
+      {/* Horizontal scan line */}
+      {showScanLine && (
+        <div 
+          className="fixed left-0 right-0 h-1 z-[70] pointer-events-none bg-gradient-to-r from-transparent via-[#00ff88]/60 to-transparent"
+          style={{ animation: 'scan-line-full 0.8s linear' }}
+        />
+      )}
+      
+      {/* Chromatic aberration / RGB split effect */}
+      {chromaticAberration && (
+        <>
+          <div 
+            className="fixed inset-0 z-[65] pointer-events-none mix-blend-screen"
+            style={{
+              background: 'radial-gradient(circle at 30% 50%, rgba(255,0,0,0.08) 0%, transparent 50%)',
+              transform: 'translateX(-3px)'
+            }}
+          />
+          <div 
+            className="fixed inset-0 z-[65] pointer-events-none mix-blend-screen"
+            style={{
+              background: 'radial-gradient(circle at 70% 50%, rgba(0,0,255,0.08) 0%, transparent 50%)',
+              transform: 'translateX(3px)'
+            }}
+          />
+        </>
+      )}
+      
+      {/* RGB split effect overlay (constant subtle) */}
+      <div 
+        className="fixed inset-0 z-[55] pointer-events-none"
+        style={{
+          opacity: glitchFrame > 0 ? 0.2 : 0,
+          background: 'linear-gradient(90deg, rgba(255,0,0,0.1) 33%, rgba(0,255,0,0.1) 33% 66%, rgba(0,0,255,0.1) 66%)',
+          transition: 'opacity 50ms'
+        }}
+      />
+      
+      {/* Vignette effect */}
+      <div 
+        className="fixed inset-0 z-[54] pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)'
+        }}
+      />
+      
+      {/* Screen corruption CSS */}
+      <style>{`
+        @keyframes corruption-flicker {
+          0%, 100% { opacity: 0.3; transform: translateX(0); }
+          25% { opacity: 0.5; transform: translateX(1px); }
+          50% { opacity: 0.2; transform: translateX(-1px); }
+          75% { opacity: 0.4; transform: translateX(0.5px); }
+        }
+        
+        @keyframes scan-line-full {
+          0% { top: -2px; }
+          100% { top: 100%; }
+        }
+        
+        @keyframes screen-glitch {
+          0%, 100% { transform: translate(0); filter: none; }
+          10% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+          20% { transform: translate(2px, -1px); filter: hue-rotate(-90deg); }
+          30% { transform: translate(0); filter: none; }
+        }
+        
+        @keyframes digital-noise {
+          0%, 100% { background-position: 0 0; }
+          10% { background-position: -5% -10%; }
+          20% { background-position: -15% 5%; }
+          30% { background-position: 7% -25%; }
+          40% { background-position: -5% 25%; }
+          50% { background-position: -15% 10%; }
+          60% { background-position: 15% 0%; }
+          70% { background-position: 0% 15%; }
+          80% { background-position: 3% 35%; }
+          90% { background-position: -10% 10%; }
+        }
+        
+        @keyframes text-scramble {
+          0%, 100% { 
+            transform: translateX(0); 
+            filter: none;
+            opacity: 1;
+          }
+          25% { 
+            transform: translateX(-2px) skewX(-2deg); 
+            filter: hue-rotate(60deg) contrast(1.2);
+            opacity: 0.8;
+          }
+          50% { 
+            transform: translateX(2px) skewX(2deg); 
+            filter: hue-rotate(-60deg) saturate(1.5);
+            opacity: 0.9;
+          }
+          75% { 
+            transform: translateX(-1px); 
+            filter: brightness(1.3);
+            opacity: 0.85;
+          }
+        }
+        
+        /* Apply glitch class to any element */
+        .glitch-text {
+          animation: text-scramble 0.15s ease-in-out;
+        }
+        
+        /* Constant subtle RGB offset for high-tech feel */
+        .chromatic-shift::before,
+        .chromatic-shift::after {
+          content: attr(data-text);
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+        .chromatic-shift::before {
+          left: 1px;
+          text-shadow: -1px 0 rgba(255, 0, 0, 0.5);
+          clip: rect(24px, 550px, 90px, 0);
+        }
+        .chromatic-shift::after {
+          left: -1px;
+          text-shadow: 1px 0 rgba(0, 255, 255, 0.5);
+          clip: rect(85px, 550px, 140px, 0);
+        }
+      `}</style>
+    </>
   );
 };
 
@@ -2185,11 +2726,45 @@ const Index = () => {
   
   const totalSlides = 11;
   const [soundMuted, setSoundMuted] = useState(false);
+  const [ambientInitialized, setAmbientInitialized] = useState(false);
   
-  // Toggle sound mute
+  // Initialize ambient sound on first user interaction
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (!ambientInitialized && !soundMuted) {
+        startAmbientSound();
+        setAmbientInitialized(true);
+      }
+      // Remove listeners after first interaction
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+    
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
+    document.addEventListener('keydown', handleFirstInteraction);
+    
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, [ambientInitialized, soundMuted]);
+  
+  // Cleanup ambient sound on unmount
+  useEffect(() => {
+    return () => {
+      stopAmbientSound();
+    };
+  }, []);
+  
+  // Toggle sound mute (includes ambient sounds)
   const toggleMute = () => {
-    isMuted = !isMuted;
-    setSoundMuted(isMuted);
+    const newMuted = !isMuted;
+    isMuted = newMuted;
+    setSoundMuted(newMuted);
+    toggleAmbientMute(newMuted);
   };
   
   // Handler for opening checkout modal with specific product
@@ -2309,7 +2884,7 @@ const Index = () => {
       <WisdomSlide2 isActive={currentSlide === 4} />
       <WisdomSlide3 isActive={currentSlide === 5} />
       <BookRevealSlide isActive={currentSlide === 6} onBookCheckout={handleOpenCheckout} />
-      <AcademySlide isActive={currentSlide === 7} onAcademyCheckout={handleOpenCheckout} />
+      <AcademySlide isActive={currentSlide === 7} />
       <SoulQuizSlide isActive={currentSlide === 8} onComplete={handleArchetypeComplete} />
       <ArchetypeRevealSlide isActive={currentSlide === 9} archetype={archetype} />
       <FinalCTASlide isActive={currentSlide === 10} onCheckout={() => handleOpenCheckout("awakening_bundle", {
@@ -2566,15 +3141,11 @@ const Index = () => {
   
   return (
     <>
-      {/* Mobile view - fullscreen */}
-      <div className="lg:hidden">
-        <MobileContent />
-      </div>
+      {/* Full screen takeover - no phone frame, feels like browser is hacked */}
+      <MobileContent />
       
-      {/* Desktop view - phone frame */}
-      <PhoneFrame>
-        <MobileContent />
-      </PhoneFrame>
+      {/* Screen corruption effects - makes it look like the screen is being hacked */}
+      <ScreenCorruptionEffects />
       
       {/* Checkout Modal */}
       <CheckoutModal 
