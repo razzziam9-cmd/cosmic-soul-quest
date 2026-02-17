@@ -327,33 +327,42 @@ const DivineMessageSlide = ({ isActive }: { isActive: boolean }) => {
 };
 
 // SLIDE 3: Phone iMessage Style
-const PhoneMessageSlide = ({ isActive }: { isActive: boolean }) => {
+const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvance?: () => void }) => {
   const [messages, setMessages] = useState<Array<{ text: string; type: 'incoming' | 'typing' | 'sent'; visible: boolean }>>([]);
   const [showTapButton, setShowTapButton] = useState(false);
+  const [waitingForReply, setWaitingForReply] = useState(false);
+  const [phase, setPhase] = useState<'initial' | 'afterReply'>('initial');
   
-  const messageSequence = [
+  // Phase 1: Initial messages up to the point where user needs to reply
+  const initialMessages = [
     { text: "📡 Incoming transmission...", type: 'incoming' as const, delay: 800 },
     { text: "I've been waiting for you", type: 'incoming' as const, delay: 2500 },
     { text: "⚡ Your frequency detected...", type: 'incoming' as const, delay: 4500 },
-    { text: "What frequency?", type: 'sent' as const, delay: 6500 },
-    { text: "🔮 Initiating soul scan...", type: 'incoming' as const, delay: 8000 },
-    { text: "✨ MATCH FOUND: Cosmic Warrior Soul", type: 'incoming' as const, delay: 10500 },
   ];
   
+  // Phase 2: Messages after user taps to reply
+  const afterReplyMessages = [
+    { text: "🔮 Initiating soul scan...", type: 'incoming' as const, delay: 500 },
+    { text: "Analyzing cosmic signature...", type: 'incoming' as const, delay: 2000 },
+    { text: "✨ MATCH FOUND", type: 'incoming' as const, delay: 3500 },
+    { text: "Cosmic Warrior Soul", type: 'incoming' as const, delay: 4500 },
+    { text: "You are one of the seven. The prophecy is real.", type: 'incoming' as const, delay: 6000 },
+  ];
+  
+  // Initial messages sequence
   useEffect(() => {
-    if (!isActive) {
-      setMessages([]);
-      setShowTapButton(false);
+    if (!isActive || phase !== 'initial') {
       return;
     }
     
     setMessages([]);
     setShowTapButton(false);
+    setWaitingForReply(false);
     
     const timeouts: NodeJS.Timeout[] = [];
     
-    messageSequence.forEach((msg, index) => {
-      // Show typing indicator first for incoming messages
+    initialMessages.forEach((msg, index) => {
+      // Show typing indicator first
       if (msg.type === 'incoming') {
         const typingTimeout = setTimeout(() => {
           setMessages(prev => [...prev, { text: '', type: 'typing', visible: true }]);
@@ -363,20 +372,84 @@ const PhoneMessageSlide = ({ isActive }: { isActive: boolean }) => {
       
       const msgTimeout = setTimeout(() => {
         setMessages(prev => {
-          // Remove typing indicator and add actual message
           const filtered = prev.filter(m => m.type !== 'typing');
           return [...filtered, { ...msg, visible: true }];
         });
         
-        if (index === messageSequence.length - 1) {
-          setTimeout(() => setShowTapButton(true), 1000);
+        // After initial messages, show TAP TO REPLY
+        if (index === initialMessages.length - 1) {
+          setTimeout(() => {
+            setShowTapButton(true);
+            setWaitingForReply(true);
+          }, 1000);
         }
       }, msg.delay);
       timeouts.push(msgTimeout);
     });
     
     return () => timeouts.forEach(t => clearTimeout(t));
+  }, [isActive, phase]);
+  
+  // After reply messages sequence
+  useEffect(() => {
+    if (!isActive || phase !== 'afterReply') {
+      return;
+    }
+    
+    const timeouts: NodeJS.Timeout[] = [];
+    
+    afterReplyMessages.forEach((msg, index) => {
+      // Show typing indicator first
+      if (msg.type === 'incoming') {
+        const typingTimeout = setTimeout(() => {
+          setMessages(prev => [...prev, { text: '', type: 'typing', visible: true }]);
+        }, msg.delay - 500);
+        timeouts.push(typingTimeout);
+      }
+      
+      const msgTimeout = setTimeout(() => {
+        setMessages(prev => {
+          const filtered = prev.filter(m => m.type !== 'typing');
+          return [...filtered, { ...msg, visible: true }];
+        });
+        
+        // After all messages, advance to next slide
+        if (index === afterReplyMessages.length - 1) {
+          setTimeout(() => {
+            onAdvance?.();
+          }, 2000);
+        }
+      }, msg.delay);
+      timeouts.push(msgTimeout);
+    });
+    
+    return () => timeouts.forEach(t => clearTimeout(t));
+  }, [isActive, phase, onAdvance]);
+  
+  // Reset when slide becomes inactive
+  useEffect(() => {
+    if (!isActive) {
+      setMessages([]);
+      setShowTapButton(false);
+      setWaitingForReply(false);
+      setPhase('initial');
+    }
   }, [isActive]);
+  
+  const handleTapToReply = () => {
+    if (!waitingForReply) return;
+    
+    setShowTapButton(false);
+    setWaitingForReply(false);
+    
+    // Add user's reply
+    setMessages(prev => [...prev, { text: "What frequency? 🤔", type: 'sent', visible: true }]);
+    
+    // Start phase 2
+    setTimeout(() => {
+      setPhase('afterReply');
+    }, 800);
+  };
   
   return (
     <div className={`absolute inset-0 flex flex-col transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
@@ -458,34 +531,34 @@ const PhoneMessageSlide = ({ isActive }: { isActive: boolean }) => {
         </div>
       </div>
       
-      {/* iMessage input bar */}
+      {/* iMessage input bar - shows TAP TO REPLY button when waiting */}
       <div className="bg-[#1c1c1e] px-4 py-3 border-t border-gray-700/50">
-        <div className="flex items-center gap-3 max-w-lg mx-auto">
-          <button className="text-[#0a84ff]">
-            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+        {showTapButton ? (
+          <button 
+            onClick={handleTapToReply}
+            className="w-full max-w-lg mx-auto block bg-[#0a84ff] text-white py-3 rounded-full font-semibold text-base animate-pulse"
+          >
+            TAP TO REPLY
           </button>
-          <div className="flex-1 bg-[#3a3a3c] rounded-full px-4 py-2">
-            <span className="text-gray-400 text-sm">iMessage</span>
+        ) : (
+          <div className="flex items-center gap-3 max-w-lg mx-auto">
+            <button className="text-[#0a84ff]">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+            <div className="flex-1 bg-[#3a3a3c] rounded-full px-4 py-2">
+              <span className="text-gray-400 text-sm">iMessage</span>
+            </div>
+            <button className="text-[#0a84ff]">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+            </button>
           </div>
-          <button className="text-[#0a84ff]">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-            </svg>
-          </button>
-        </div>
+        )}
       </div>
-      
-      {/* Tap to continue overlay */}
-      {showTapButton && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center animate-[fadeIn_0.5s_ease-out]">
-          <div className="bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 text-white px-6 py-3 rounded-full font-['Orbitron'] text-sm font-bold animate-pulse shadow-lg shadow-[#00ff88]/30">
-            TAP TO REPLY ✨
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1036,15 +1109,15 @@ const Index = () => {
       {/* Progress bars */}
       <ProgressBars currentSlide={currentSlide} totalSlides={totalSlides} isAnimating={isAnimating} />
       
-      {/* Tap zones - disable for quiz slide */}
-      {currentSlide !== 3 && (
+      {/* Tap zones - disable for quiz and phone message slide */}
+      {currentSlide !== 3 && currentSlide !== 2 && (
         <TapZones onPrev={goToPrevSlide} onNext={goToNextSlide} showHints={showHints} />
       )}
       
       {/* Slides */}
       <HeroSlide isActive={currentSlide === 0} />
       <DivineMessageSlide isActive={currentSlide === 1} />
-      <PhoneMessageSlide isActive={currentSlide === 2} />
+      <PhoneMessageSlide isActive={currentSlide === 2} onAdvance={goToNextSlide} />
       <SoulQuizSlide isActive={currentSlide === 3} onComplete={handleArchetypeComplete} />
       <ArchetypeRevealSlide isActive={currentSlide === 4} archetype={archetype} />
       <BookRevealSlide isActive={currentSlide === 5} />
