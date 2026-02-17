@@ -993,9 +993,7 @@ const MessageBubbleEnhanced = ({
 const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvance?: () => void }) => {
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [showTapButton, setShowTapButton] = useState(false);
-  const [waitingForReply, setWaitingForReply] = useState(false);
-  const [phase, setPhase] = useState<'initial' | 'afterReply'>('initial');
+  const [showAwakeningButton, setShowAwakeningButton] = useState(false);
   const [currentTime, setCurrentTime] = useState('3:33');
   const [newMessageIndex, setNewMessageIndex] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1007,37 +1005,29 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     }
   }, [messages, isTyping]);
   
-  // Phase 1: Initial messages with realistic varied typing delays (2-4 seconds typing time)
-  // pauseBefore = thinking pause before typing starts, typingDuration = how long typing indicator shows
-  const initialMessages: Array<{ 
+  // Complete message sequence from the divine messenger - no interruptions
+  const allMessages: Array<{ 
     text: string; 
     typingDuration: number; 
     pauseBefore: number; 
     time: string; 
     showTimestamp?: boolean 
   }> = [
-    { text: "📡 Incoming transmission...", typingDuration: 2400, pauseBefore: 1200, time: '3:33', showTimestamp: true },
-    { text: "I've been waiting for you", typingDuration: 3200, pauseBefore: 1800, time: '3:33' },
-    { text: "⚡ Your frequency detected...", typingDuration: 2800, pauseBefore: 2400, time: '3:34', showTimestamp: true },
-  ];
-  
-  // Phase 2: Messages after user taps to reply - varied speeds like real typing
-  const afterReplyMessages: Array<{ 
-    text: string; 
-    typingDuration: number; 
-    pauseBefore: number; 
-    time: string; 
-    showTimestamp?: boolean 
-  }> = [
-    { text: "🔮 Initiating soul scan...", typingDuration: 2200, pauseBefore: 1400, time: '3:34' },
-    { text: "Analyzing cosmic signature...", typingDuration: 3800, pauseBefore: 2600, time: '3:35', showTimestamp: true },
-    { text: "✨ MATCH FOUND", typingDuration: 1600, pauseBefore: 3400, time: '3:35' },
-    { text: "Cosmic Warrior Soul", typingDuration: 2600, pauseBefore: 900, time: '3:36' },
-    { text: "You are one of the seven. The prophecy is real.", typingDuration: 4200, pauseBefore: 2200, time: '3:36', showTimestamp: true },
+    { text: "📡 Incoming transmission...", typingDuration: 2200, pauseBefore: 1000, time: '3:33', showTimestamp: true },
+    { text: "I've been waiting for you", typingDuration: 2800, pauseBefore: 1400, time: '3:33' },
+    { text: "⚡ Your frequency detected...", typingDuration: 2400, pauseBefore: 1600, time: '3:34', showTimestamp: true },
+    { text: "🔮 Initiating soul scan...", typingDuration: 2000, pauseBefore: 1200, time: '3:34' },
+    { text: "Analyzing cosmic signature...", typingDuration: 3200, pauseBefore: 2000, time: '3:35', showTimestamp: true },
+    { text: "✨ MATCH FOUND", typingDuration: 1400, pauseBefore: 2800, time: '3:35' },
+    { text: "You carry the mark of the seven.", typingDuration: 2600, pauseBefore: 800, time: '3:36' },
+    { text: "Your soul is ancient. It remembers what your mind has forgotten.", typingDuration: 4200, pauseBefore: 1400, time: '3:36', showTimestamp: true },
+    { text: "The prophecy speaks of warriors who will reunite across dimensions to restore Earth's frequency.", typingDuration: 5000, pauseBefore: 1800, time: '3:37' },
+    { text: "You are one of them.", typingDuration: 1800, pauseBefore: 2200, time: '3:37', showTimestamp: true },
+    { text: "It's time to remember who you truly are. ✨🔮", typingDuration: 3400, pauseBefore: 1600, time: '3:38' },
   ];
   
   // Calculate cumulative timings for message sequence
-  const getMessageTimings = (msgs: typeof initialMessages) => {
+  const getMessageTimings = (msgs: typeof allMessages) => {
     let cumulative = 0;
     return msgs.map(msg => {
       const startTyping = cumulative + msg.pauseBefore;
@@ -1047,18 +1037,18 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     });
   };
   
-  // Initial messages sequence
+  // Full message sequence - plays automatically
   useEffect(() => {
-    if (!isActive || phase !== 'initial') return;
+    if (!isActive) return;
     
     setMessages([]);
-    setShowTapButton(false);
-    setWaitingForReply(false);
+    setShowAwakeningButton(false);
     setIsTyping(false);
     setNewMessageIndex(-1);
+    setCurrentTime('3:33');
     
     const timeouts: NodeJS.Timeout[] = [];
-    const timings = getMessageTimings(initialMessages);
+    const timings = getMessageTimings(allMessages);
     
     timings.forEach((msg, index) => {
       // Start typing indicator
@@ -1084,109 +1074,35 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
         // Clear new status
         setTimeout(() => setNewMessageIndex(-1), 450);
         
-        // Show TAP TO REPLY after last message
-        if (index === timings.length - 1) {
-          setTimeout(() => {
-            setShowTapButton(true);
-            setWaitingForReply(true);
-          }, 1600);
-        }
-      }, msg.showMessage));
-    });
-    
-    return () => timeouts.forEach(clearTimeout);
-  }, [isActive, phase]);
-  
-  // After reply messages sequence  
-  useEffect(() => {
-    if (!isActive || phase !== 'afterReply') return;
-    
-    const timeouts: NodeJS.Timeout[] = [];
-    const timings = getMessageTimings(afterReplyMessages);
-    const baseIndex = messages.length;
-    
-    timings.forEach((msg, index) => {
-      timeouts.push(setTimeout(() => {
-        setIsTyping(true);
-        setCurrentTime(msg.time);
-      }, msg.startTyping));
-      
-      timeouts.push(setTimeout(() => {
-        setIsTyping(false);
-        playMessageReceivedSound();
-        triggerHaptic('light');
-        setNewMessageIndex(baseIndex + index);
-        setMessages(prev => [...prev, { 
-          text: msg.text, 
-          type: 'incoming',
-          delivered: true,
-          time: msg.time,
-          showTimestamp: msg.showTimestamp
-        }]);
-        
-        setTimeout(() => setNewMessageIndex(-1), 450);
-        
+        // Show START YOUR AWAKENING button after the last message
         if (index === timings.length - 1) {
           setTimeout(() => {
             playSuccessSound();
             triggerHaptic('heavy');
-            onAdvance?.();
-          }, 3000);
+            setShowAwakeningButton(true);
+          }, 1800);
         }
       }, msg.showMessage));
     });
     
     return () => timeouts.forEach(clearTimeout);
-  }, [isActive, phase, onAdvance]);
+  }, [isActive]);
   
   // Reset when slide becomes inactive
   useEffect(() => {
     if (!isActive) {
       setMessages([]);
-      setShowTapButton(false);
-      setWaitingForReply(false);
-      setPhase('initial');
+      setShowAwakeningButton(false);
       setIsTyping(false);
       setCurrentTime('3:33');
       setNewMessageIndex(-1);
     }
   }, [isActive]);
   
-  const handleTapToReply = () => {
-    if (!waitingForReply) return;
-    
-    setShowTapButton(false);
-    setWaitingForReply(false);
-    triggerHaptic('medium');
-    
-    const newIdx = messages.length;
-    setNewMessageIndex(newIdx);
-    setMessages(prev => [...prev, { 
-      text: "What frequency? 🤔", 
-      type: 'sent',
-      delivered: false,
-      read: false,
-      time: '3:34',
-      showTimestamp: true
-    }]);
-    
-    // Delivery sequence
-    setTimeout(() => {
-      setMessages(prev => prev.map((m, i) => 
-        i === newIdx ? { ...m, delivered: true } : m
-      ));
-    }, 550);
-    
-    // Read sequence
-    setTimeout(() => {
-      setMessages(prev => prev.map((m, i) => 
-        i === newIdx ? { ...m, read: true } : m
-      ));
-      setNewMessageIndex(-1);
-    }, 1600);
-    
-    // Start phase 2
-    setTimeout(() => setPhase('afterReply'), 2100);
+  const handleStartAwakening = () => {
+    triggerHaptic('heavy');
+    playSuccessSound();
+    onAdvance?.();
   };
   
   return (
@@ -1304,21 +1220,29 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
         </div>
       </div>
       
-      {/* iMessage input bar */}
-      <div className="bg-[#1c1c1e] px-4 py-3 border-t border-[#38383a]/50">
-        {showTapButton ? (
+      {/* Bottom area - shows awakening button when messages complete */}
+      <div className="bg-[#1c1c1e] px-4 py-4 border-t border-[#38383a]/50">
+        {showAwakeningButton ? (
           <button 
             onClick={() => {
               playTapSound();
-              handleTapToReply();
+              handleStartAwakening();
             }}
-            className="w-full max-w-lg mx-auto block bg-[#007aff] text-white py-3.5 rounded-full font-semibold text-[17px] transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[50px]"
+            className="w-full max-w-lg mx-auto block text-white py-4 rounded-full font-bold text-[18px] tracking-wide transition-all hover:scale-[1.03] active:scale-[0.96] min-h-[56px] relative overflow-hidden"
             style={{ 
+              background: 'linear-gradient(135deg, #6b21a8 0%, #00ff88 50%, #0ea5e9 100%)',
+              backgroundSize: '200% 200%',
+              animation: 'awakening-btn-glow 2.5s ease-in-out infinite, awakening-gradient-shift 3s ease-in-out infinite',
+              boxShadow: '0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+              textShadow: '0 0 10px rgba(255,255,255,0.5)',
               transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-              animation: 'reply-btn-pulse 2s ease-in-out infinite'
             }}
           >
-            TAP TO REPLY
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              <span>✨</span>
+              <span>START YOUR AWAKENING</span>
+              <span>✨</span>
+            </span>
           </button>
         ) : (
           <div className="flex items-center gap-3 max-w-lg mx-auto">
@@ -1339,6 +1263,24 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           </div>
         )}
       </div>
+      
+      {/* CSS for awakening button animations */}
+      <style>{`
+        @keyframes awakening-btn-glow {
+          0%, 100% { 
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.7), 0 0 100px rgba(0, 255, 136, 0.4), 0 0 150px rgba(107, 33, 168, 0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+            transform: scale(1.02);
+          }
+        }
+        @keyframes awakening-gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+      `}</style>
     </div>
   );
 };
