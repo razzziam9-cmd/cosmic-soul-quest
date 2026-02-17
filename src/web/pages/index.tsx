@@ -411,21 +411,6 @@ const GlitchText = ({ children, className = "" }: { children: string; className?
   );
 };
 
-// Progress bars at top
-const ProgressBars = ({ current, total }: { current: number; total: number }) => (
-  <div className="fixed top-0 left-0 right-0 z-50 p-3 flex gap-1.5">
-    {Array.from({ length: total }).map((_, i) => (
-      <div key={i} className="flex-1 h-1 bg-[#00ff41]/20 rounded-full overflow-hidden">
-        <div 
-          className={`h-full rounded-full transition-all duration-500 ${
-            i < current ? 'w-full bg-[#00ff41]' : i === current ? 'w-1/2 bg-[#00ff41]/70' : 'w-0'
-          }`}
-        />
-      </div>
-    ))}
-  </div>
-);
-
 // Tap zones
 const TapZones = ({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) => {
   const [leftTap, setLeftTap] = useState(false);
@@ -1204,9 +1189,6 @@ const Index = () => {
       <ScanLines />
       <ScreenFlicker />
       <StaticCorners />
-      
-      {/* Progress bars */}
-      <ProgressBars current={currentSlide} total={TOTAL_SLIDES} />
       
       {/* Mute button */}
       <MuteButton muted={muted} onToggle={toggleMute} />
