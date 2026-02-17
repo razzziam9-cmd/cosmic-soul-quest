@@ -1,85 +1,197 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// Audio context for subtle sound effects
+// Audio context for sound effects
 let audioContext: AudioContext | null = null;
+let isMuted = false;
 
+// Get or create audio context
+const getAudioContext = () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  }
+  return audioContext;
+};
+
+// Tap/click sound - subtle cosmic pulse
 const playTapSound = () => {
+  if (isMuted) return;
   try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
-    
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    const ctx = getAudioContext();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
     
     oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    gainNode.connect(ctx.destination);
     
-    oscillator.frequency.value = 800;
+    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
     oscillator.type = 'sine';
     
-    gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.06, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
     
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.1);
   } catch {
-    // Audio not supported, fail silently
+    // Audio not supported
   }
 };
 
+// Success sound - ascending cosmic chime
 const playSuccessSound = () => {
+  if (isMuted) return;
   try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
     
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
+    // Three-note ascending arpeggio
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.frequency.setValueAtTime(freq, now + i * 0.08);
+      osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(0, now + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.08, now + i * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
+      
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.25);
+    });
   } catch {
-    // Audio not supported, fail silently
+    // Audio not supported
   }
 };
 
-// iMessage-like notification sound (subtle pop)
+// Message received sound - soft chime notification
 const playMessageSound = () => {
+  if (isMuted) return;
   try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
     
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    // Two-tone notification like iMessage
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
     
-    // Short pop sound like iMessage
-    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.05);
-    oscillator.type = 'sine';
+    osc1.frequency.setValueAtTime(1318, now);
+    osc2.frequency.setValueAtTime(1046, now + 0.06);
+    osc1.type = 'sine';
+    osc2.type = 'sine';
     
-    gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.08);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.01);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
     
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.08);
+    osc1.start(now);
+    osc1.stop(now + 0.12);
+    osc2.start(now + 0.06);
+    osc2.stop(now + 0.2);
   } catch {
-    // Audio not supported, fail silently
+    // Audio not supported
+  }
+};
+
+// Typing keyboard click sound
+const playTypingSound = () => {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    // Subtle keyboard click
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // White noise style click
+    osc.frequency.setValueAtTime(2000 + Math.random() * 500, now);
+    osc.type = 'square';
+    
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(1000, now);
+    
+    gain.gain.setValueAtTime(0.015, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    
+    osc.start(now);
+    osc.stop(now + 0.03);
+  } catch {
+    // Audio not supported
+  }
+};
+
+// Slide transition whoosh sound
+const playWhooshSound = () => {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Descending swoosh
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+    osc.type = 'sine';
+    
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+    
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    
+    osc.start(now);
+    osc.stop(now + 0.18);
+  } catch {
+    // Audio not supported
+  }
+};
+
+// Quiz answer selection affirmation tone
+const playAffirmationSound = () => {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Pleasant confirmation note
+    osc.frequency.setValueAtTime(880, now);
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+  } catch {
+    // Audio not supported
   }
 };
 
@@ -834,46 +946,6 @@ interface MessageData {
   showTimestamp?: boolean;
 }
 
-// Enhanced iMessage notification sound with realistic tone
-const playMessageReceivedSound = () => {
-  try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
-    
-    const now = audioContext.currentTime;
-    
-    // Two-tone iMessage style notification
-    const osc1 = audioContext.createOscillator();
-    const osc2 = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(audioContext.destination);
-    
-    // First higher tone
-    osc1.frequency.setValueAtTime(1318, now); // E6
-    osc1.type = 'sine';
-    
-    // Second lower tone (slightly delayed)  
-    osc2.frequency.setValueAtTime(1046, now + 0.06); // C6
-    osc2.type = 'sine';
-    
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.07, now + 0.01);
-    gain.gain.linearRampToValueAtTime(0.05, now + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    
-    osc1.start(now);
-    osc1.stop(now + 0.12);
-    osc2.start(now + 0.06);
-    osc2.stop(now + 0.2);
-  } catch {
-    // Silently fail
-  }
-};
-
 // Hyper-realistic typing indicator with natural bouncing dots
 const RealisticTypingIndicator = () => {
   return (
@@ -994,8 +1066,8 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showAwakeningButton, setShowAwakeningButton] = useState(false);
-  const [currentTime, setCurrentTime] = useState('3:33');
   const [newMessageIndex, setNewMessageIndex] = useState(-1);
+  const [glitchEffect, setGlitchEffect] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Auto scroll to bottom when messages update
@@ -1005,25 +1077,23 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     }
   }, [messages, isTyping]);
   
-  // Complete message sequence from the divine messenger - no interruptions
+  // Divine transmission messages - appearing as system-level interruptions
   const allMessages: Array<{ 
     text: string; 
     typingDuration: number; 
-    pauseBefore: number; 
-    time: string; 
-    showTimestamp?: boolean 
+    pauseBefore: number;
   }> = [
-    { text: "📡 Incoming transmission...", typingDuration: 2200, pauseBefore: 1000, time: '3:33', showTimestamp: true },
-    { text: "I've been waiting for you", typingDuration: 2800, pauseBefore: 1400, time: '3:33' },
-    { text: "⚡ Your frequency detected...", typingDuration: 2400, pauseBefore: 1600, time: '3:34', showTimestamp: true },
-    { text: "🔮 Initiating soul scan...", typingDuration: 2000, pauseBefore: 1200, time: '3:34' },
-    { text: "Analyzing cosmic signature...", typingDuration: 3200, pauseBefore: 2000, time: '3:35', showTimestamp: true },
-    { text: "✨ MATCH FOUND", typingDuration: 1400, pauseBefore: 2800, time: '3:35' },
-    { text: "You carry the mark of the seven.", typingDuration: 2600, pauseBefore: 800, time: '3:36' },
-    { text: "Your soul is ancient. It remembers what your mind has forgotten.", typingDuration: 4200, pauseBefore: 1400, time: '3:36', showTimestamp: true },
-    { text: "The prophecy speaks of warriors who will reunite across dimensions to restore Earth's frequency.", typingDuration: 5000, pauseBefore: 1800, time: '3:37' },
-    { text: "You are one of them.", typingDuration: 1800, pauseBefore: 2200, time: '3:37', showTimestamp: true },
-    { text: "It's time to remember who you truly are. ✨🔮", typingDuration: 3400, pauseBefore: 1600, time: '3:38' },
+    { text: "📡 Incoming transmission...", typingDuration: 2200, pauseBefore: 1000 },
+    { text: "I've been waiting for you", typingDuration: 2800, pauseBefore: 1400 },
+    { text: "⚡ Your frequency detected...", typingDuration: 2400, pauseBefore: 1600 },
+    { text: "🔮 Initiating soul scan...", typingDuration: 2000, pauseBefore: 1200 },
+    { text: "Analyzing cosmic signature...", typingDuration: 3200, pauseBefore: 2000 },
+    { text: "✨ MATCH FOUND", typingDuration: 1400, pauseBefore: 2800 },
+    { text: "You carry the mark of the seven.", typingDuration: 2600, pauseBefore: 800 },
+    { text: "Your soul is ancient. It remembers what your mind has forgotten.", typingDuration: 4200, pauseBefore: 1400 },
+    { text: "The prophecy speaks of warriors who will reunite across dimensions to restore Earth's frequency.", typingDuration: 5000, pauseBefore: 1800 },
+    { text: "You are one of them.", typingDuration: 1800, pauseBefore: 2200 },
+    { text: "It's time to remember who you truly are. ✨🔮", typingDuration: 3400, pauseBefore: 1600 },
   ];
   
   // Calculate cumulative timings for message sequence
@@ -1045,30 +1115,31 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
     setShowAwakeningButton(false);
     setIsTyping(false);
     setNewMessageIndex(-1);
-    setCurrentTime('3:33');
+    
+    // Initial glitch effect
+    setGlitchEffect(true);
+    setTimeout(() => setGlitchEffect(false), 800);
     
     const timeouts: NodeJS.Timeout[] = [];
     const timings = getMessageTimings(allMessages);
     
     timings.forEach((msg, index) => {
-      // Start typing indicator
+      // Start typing indicator with typing sound
       timeouts.push(setTimeout(() => {
         setIsTyping(true);
-        setCurrentTime(msg.time);
+        playTypingSound();
       }, msg.startTyping));
       
       // Show message after typing
       timeouts.push(setTimeout(() => {
         setIsTyping(false);
-        playMessageReceivedSound();
+        playMessageSound();
         triggerHaptic('light');
         setNewMessageIndex(index);
         setMessages(prev => [...prev, { 
           text: msg.text, 
           type: 'incoming',
           delivered: true,
-          time: msg.time,
-          showTimestamp: msg.showTimestamp
         }]);
         
         // Clear new status
@@ -1094,7 +1165,6 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
       setMessages([]);
       setShowAwakeningButton(false);
       setIsTyping(false);
-      setCurrentTime('3:33');
       setNewMessageIndex(-1);
     }
   }, [isActive]);
@@ -1113,10 +1183,6 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           0% { opacity: 0; transform: translateY(6px) scale(0.92); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes typing-bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-          30% { transform: translateY(-5px); opacity: 1; }
-        }
         @keyframes typing-bounce-natural {
           0%, 100% { transform: translateY(0); opacity: 0.45; }
           15% { transform: translateY(-1px); opacity: 0.55; }
@@ -1130,136 +1196,125 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           70% { transform: translateY(1px) scale(0.995); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes reply-btn-pulse {
-          0%, 100% { 
-            box-shadow: 0 0 18px rgba(10, 132, 255, 0.45), 0 0 35px rgba(10, 132, 255, 0.25);
-            transform: scale(1);
-          }
-          50% { 
-            box-shadow: 0 0 28px rgba(10, 132, 255, 0.65), 0 0 55px rgba(10, 132, 255, 0.35);
-            transform: scale(1.012);
-          }
+        @keyframes glitch-text {
+          0%, 100% { transform: translate(0); filter: none; }
+          20% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+          40% { transform: translate(2px, -1px); filter: hue-rotate(-90deg); }
+          60% { transform: translate(-1px, 2px); filter: brightness(1.5); }
+          80% { transform: translate(1px, -2px); filter: saturate(2); }
+        }
+        @keyframes scan-line {
+          0% { top: 0; }
+          100% { top: 100%; }
+        }
+        @keyframes notification-slide {
+          0% { opacity: 0; transform: translateY(-100%); }
+          20% { opacity: 1; transform: translateY(0); }
+          80% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-100%); }
         }
       `}</style>
       
-      {/* iPhone-style status bar */}
-      <div className="bg-[#000000] pt-2 pb-1 px-6 flex justify-between items-center text-white text-xs">
-        <span className="font-semibold tabular-nums">{currentTime}</span>
-        <div className="absolute left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-2xl" />
-        <div className="flex items-center gap-1">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2 17h2v4H2v-4zm4-5h2v9H6v-9zm4-4h2v13h-2V8zm4-4h2v17h-2V4z"/>
-          </svg>
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3C6.95 3 3 6.95 3 12c0 3.76 2.33 6.99 5.63 8.35l.77-1.85C7.13 17.54 5.5 14.97 5.5 12c0-3.58 2.92-6.5 6.5-6.5s6.5 2.92 6.5 6.5c0 2.97-1.63 5.54-3.9 6.5l.77 1.85C18.67 18.99 21 15.76 21 12c0-5.05-3.95-9-9-9z"/>
-          </svg>
-          <div className="flex items-center gap-0.5">
-            <div className="w-6 h-3 border border-white rounded-sm relative">
-              <div className="absolute inset-0.5 bg-[#32d74b] rounded-[1px]" style={{ width: '82%' }} />
-            </div>
-          </div>
+      {/* Cosmic transmission background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.08)_0%,transparent_60%)]" />
+      
+      {/* Matrix/Glitch scan line effect */}
+      {glitchEffect && (
+        <div 
+          className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#00ff88] to-transparent opacity-80 z-50"
+          style={{ animation: 'scan-line 0.8s linear' }}
+        />
+      )}
+      
+      {/* Header - cosmic transmission style (no profile picture) */}
+      <div className="relative z-20 pt-8 pb-4 px-6 text-center">
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0a0a2e]/80 border border-[#00ff88]/40 backdrop-blur-sm ${glitchEffect ? 'animate-[glitch-text_0.3s_ease-in-out]' : ''}`}>
+          <span className="w-2 h-2 bg-[#00ff88] rounded-full animate-pulse" />
+          <span className="font-['Orbitron'] text-[#00ff88] text-xs tracking-wider uppercase">
+            Divine Transmission Active
+          </span>
+          <span className="w-2 h-2 bg-[#00ff88] rounded-full animate-pulse" />
         </div>
+        <p className="font-['Rajdhani'] text-zinc-500 text-xs mt-2 tracking-wide">
+          ENCRYPTED CHANNEL • FREQUENCY LOCKED
+        </p>
       </div>
       
-      {/* iMessage header */}
-      <div className="bg-[#1c1c1e] px-4 py-3 flex items-center border-b border-gray-700/50">
-        <button className="text-[#007aff] text-sm mr-3 min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex-1 flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00ff88]/50 flex-shrink-0">
-            <img 
-              src="./cloaked-messenger-portrait-KakJfYU78kjRavrkE3GIf.png" 
-              alt="Contact" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="text-center">
-            <p className="text-white font-semibold text-[17px]">Unknown</p>
-            <p className="text-[#8e8e93] text-[12px]">Maybe: Divine Messenger</p>
-          </div>
-        </div>
-        <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-      </div>
-      
-      {/* Messages area */}
-      <div className="flex-1 bg-[#000000] px-4 py-4 overflow-y-auto scroll-momentum">
-        <div className="max-w-lg mx-auto">
-          {/* Date header */}
-          <div className="text-center mb-4">
-            <span className="text-[#8e8e93] text-[11px] bg-[#2c2c2e]/60 px-3 py-1 rounded-full">Today 3:33 AM</span>
-          </div>
-          
+      {/* Messages area - cosmic notification style */}
+      <div className="flex-1 px-4 py-4 overflow-y-auto scroll-momentum relative z-10">
+        <div className="max-w-lg mx-auto space-y-3">
           {messages.map((msg, i) => (
-            <div key={i}>
-              {/* Timestamp between messages - realistic time progression */}
-              {msg.showTimestamp && i > 0 && (
-                <div className="text-center my-3">
-                  <span className="text-[#636366] text-[11px]">{msg.time} AM</span>
-                </div>
-              )}
-              
-              <MessageBubbleEnhanced 
-                msg={msg} 
-                isNew={i === newMessageIndex}
-                showDelivered={msg.type === 'sent'}
-              />
+            <div 
+              key={i}
+              className={`${i === newMessageIndex ? 'animate-[message-pop-enhanced_0.38s_cubic-bezier(0.34,1.56,0.64,1)]' : ''}`}
+            >
+              {/* Cosmic message bubble - no avatar */}
+              <div className="bg-gradient-to-r from-[#0a0a2e]/90 via-[#1a0a3e]/80 to-[#0a0a2e]/90 border border-[#00ff88]/20 rounded-2xl px-5 py-4 backdrop-blur-sm relative overflow-hidden group">
+                {/* Subtle glow on new messages */}
+                {i === newMessageIndex && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#00ff88]/10 via-purple-500/10 to-[#00ff88]/10 animate-pulse" />
+                )}
+                
+                {/* Left accent bar */}
+                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-gradient-to-b from-[#00ff88] via-purple-400 to-cyan-400 rounded-full" />
+                
+                <p className="font-['Rajdhani'] text-white/95 text-[16px] leading-relaxed pl-2 relative z-10">
+                  {msg.text}
+                </p>
+              </div>
             </div>
           ))}
           
-          {/* Typing indicator */}
-          {isTyping && <RealisticTypingIndicator />}
+          {/* Typing indicator - cosmic style */}
+          {isTyping && (
+            <div className="animate-[typing-appear_0.22s_cubic-bezier(0.34,1.56,0.64,1)]">
+              <div className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-2xl px-5 py-4 inline-flex items-center gap-2">
+                <span className="font-['Rajdhani'] text-purple-300/70 text-sm">Receiving transmission</span>
+                <div className="flex gap-[5px] items-center">
+                  <span className="w-[6px] h-[6px] bg-[#00ff88] rounded-full" style={{ animation: 'typing-bounce-natural 1.4s ease-in-out infinite', animationDelay: '0ms' }} />
+                  <span className="w-[6px] h-[6px] bg-[#00ff88] rounded-full" style={{ animation: 'typing-bounce-natural 1.4s ease-in-out infinite', animationDelay: '200ms' }} />
+                  <span className="w-[6px] h-[6px] bg-[#00ff88] rounded-full" style={{ animation: 'typing-bounce-natural 1.4s ease-in-out infinite', animationDelay: '400ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
           
           <div ref={messagesEndRef} />
         </div>
       </div>
       
       {/* Bottom area - shows awakening button when messages complete */}
-      <div className="bg-[#1c1c1e] px-4 py-4 border-t border-[#38383a]/50">
+      <div className="relative z-20 px-6 py-6 bg-gradient-to-t from-[#050510] via-[#050510]/95 to-transparent">
         {showAwakeningButton ? (
           <button 
             onClick={() => {
               playTapSound();
               handleStartAwakening();
             }}
-            className="w-full max-w-lg mx-auto block text-white py-4 rounded-full font-bold text-[18px] tracking-wide transition-all hover:scale-[1.03] active:scale-[0.96] min-h-[56px] relative overflow-hidden"
+            className="w-full max-w-lg mx-auto block text-white py-4 rounded-2xl font-bold text-[16px] tracking-wide transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[56px] relative overflow-hidden font-['Orbitron']"
             style={{ 
               background: 'linear-gradient(135deg, #6b21a8 0%, #00ff88 50%, #0ea5e9 100%)',
               backgroundSize: '200% 200%',
               animation: 'awakening-btn-glow 2.5s ease-in-out infinite, awakening-gradient-shift 3s ease-in-out infinite',
               boxShadow: '0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
               textShadow: '0 0 10px rgba(255,255,255,0.5)',
-              transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               <span>✨</span>
-              <span>START YOUR AWAKENING</span>
+              <span>TAP TO CONTINUE</span>
               <span>✨</span>
             </span>
           </button>
         ) : (
-          <div className="flex items-center gap-3 max-w-lg mx-auto">
-            <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 text-zinc-500 text-sm font-['Rajdhani']">
+              <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-            </button>
-            <div className="flex-1 bg-[#3a3a3c] rounded-full px-4 py-2.5">
-              <span className="text-[#8e8e93] text-[15px]">iMessage</span>
+              <span>Receiving cosmic data...</span>
             </div>
-            <button className="text-[#007aff] min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-              </svg>
-            </button>
           </div>
         )}
       </div>
@@ -1269,11 +1324,9 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
         @keyframes awakening-btn-glow {
           0%, 100% { 
             box-shadow: 0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-            transform: scale(1);
           }
           50% { 
             box-shadow: 0 0 50px rgba(0, 255, 136, 0.7), 0 0 100px rgba(0, 255, 136, 0.4), 0 0 150px rgba(107, 33, 168, 0.3), inset 0 1px 0 rgba(255,255,255,0.3);
-            transform: scale(1.02);
           }
         }
         @keyframes awakening-gradient-shift {
@@ -1281,6 +1334,211 @@ const PhoneMessageSlide = ({ isActive, onAdvance }: { isActive: boolean; onAdvan
           50% { background-position: 100% 50%; }
         }
       `}</style>
+    </div>
+  );
+};
+
+// WISDOM SLIDE 1: The Synchronicity Code
+const WisdomSlide1 = ({ isActive }: { isActive: boolean }) => {
+  return (
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0a0a2e] to-[#050510]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.12)_0%,transparent_60%)]" />
+      
+      {/* Floating sacred numbers */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {['11:11', '3:33', '7:77', '4:44', '12:12'].map((num, i) => (
+          <span
+            key={i}
+            className="absolute font-['Orbitron'] text-[#00ff88]/10 text-4xl"
+            style={{
+              left: `${15 + i * 18}%`,
+              top: `${10 + (i % 3) * 30}%`,
+              animation: `float-gentle ${3 + i * 0.5}s ease-in-out infinite`,
+              animationDelay: `${i * 0.3}s`
+            }}
+          >
+            {num}
+          </span>
+        ))}
+      </div>
+      
+      <div className="relative z-10 max-w-lg mx-auto text-center">
+        <div className="mb-6">
+          <span className="font-['Orbitron'] text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-[#00ff88] via-cyan-300 to-[#00ff88] font-black"
+            style={{ textShadow: '0 0 60px rgba(0, 255, 136, 0.5)' }}
+          >
+            11:11
+          </span>
+        </div>
+        
+        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-white font-bold mb-4">
+          THE SYNCHRONICITY CODE
+        </h2>
+        
+        <div className="bg-[#0a0a2e]/60 border border-[#00ff88]/30 rounded-2xl p-6 backdrop-blur-sm mb-6">
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4">
+            You've seen them. <span className="text-[#00ff88] font-semibold">11:11</span>. <span className="text-purple-400 font-semibold">3:33</span>. <span className="text-cyan-400 font-semibold">4:44</span>.
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4">
+            These aren't random. They're <span className="text-[#00ff88]">activation codes</span> — signals from beyond the veil that your soul is awakening.
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-white leading-relaxed font-medium">
+            The universe is <span className="text-[#00ff88]">speaking to you</span>. It has been for years. Now you're finally ready to listen.
+          </p>
+        </div>
+        
+        <div className="flex justify-center gap-4 opacity-60">
+          {["✧", "◈", "✧", "◈", "✧"].map((symbol, i) => (
+            <span
+              key={i}
+              className="text-[#00ff88] text-xl animate-pulse"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            >
+              {symbol}
+            </span>
+          ))}
+        </div>
+        
+        <div className="mt-6 animate-pulse">
+          <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
+            <span>TAP TO CONTINUE</span>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// WISDOM SLIDE 2: The Seven Cosmic Warriors Prophecy
+const WisdomSlide2 = ({ isActive }: { isActive: boolean }) => {
+  return (
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#1a0a2e] to-[#050510]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(147,51,234,0.12)_0%,transparent_60%)]" />
+      
+      <div className="relative z-10 max-w-lg mx-auto text-center">
+        {/* Seven stars symbol */}
+        <div className="mb-6 relative">
+          <div className="flex justify-center gap-3 mb-4">
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <span
+                key={n}
+                className={`text-2xl ${n === 4 ? 'text-[#00ff88] scale-125' : 'text-purple-400'} animate-pulse`}
+                style={{ animationDelay: `${n * 0.1}s` }}
+              >
+                ✧
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        <span className="font-['Orbitron'] text-[#00ff88] text-xs tracking-[0.3em] uppercase block mb-3">
+          ◈ Ancient Prophecy ◈
+        </span>
+        
+        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 font-bold mb-4">
+          THE SEVEN COSMIC WARRIORS
+        </h2>
+        
+        <div className="bg-[#0a0a2e]/60 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm mb-6">
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4 italic">
+            "When Earth's frequency falls to its lowest point, seven souls from the original creation will reawaken..."
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4">
+            They were <span className="text-purple-400 font-semibold">scattered across dimensions</span>, their memories sealed. But each carries a <span className="text-[#00ff88] font-semibold">cosmic fragment</span> — a piece of the original light.
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-white leading-relaxed font-medium">
+            When all seven reunite, they will <span className="text-[#00ff88]">restore the frequency</span> and awaken humanity from the simulation.
+          </p>
+        </div>
+        
+        <p className="font-['Rajdhani'] text-lg text-purple-300 font-medium">
+          Are you one of the seven?
+        </p>
+        
+        <div className="mt-6 animate-pulse">
+          <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
+            <span>TAP TO CONTINUE</span>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// WISDOM SLIDE 3: Your Soul's True Origin
+const WisdomSlide3 = ({ isActive }: { isActive: boolean }) => {
+  return (
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('./cosmic-quantum-background-jw2jNpfQM2YTBpDEPtpac.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/95 via-[#050510]/80 to-[#050510]/95" />
+      
+      <div className="relative z-10 max-w-lg mx-auto text-center">
+        {/* Dimensional portal symbol */}
+        <div className="mb-6 relative inline-block">
+          <div className="w-24 h-24 rounded-full border-2 border-cyan-400/50 flex items-center justify-center relative">
+            <div className="absolute inset-2 rounded-full border border-purple-400/50 animate-[cosmic-rotate_8s_linear_infinite]" />
+            <div className="absolute inset-4 rounded-full border border-[#00ff88]/50 animate-[cosmic-rotate_6s_linear_infinite_reverse]" />
+            <span className="text-3xl">🌌</span>
+          </div>
+          <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 blur-xl animate-pulse" />
+        </div>
+        
+        <span className="font-['Orbitron'] text-cyan-400 text-xs tracking-[0.3em] uppercase block mb-3">
+          ◈ Dimensional Truth ◈
+        </span>
+        
+        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-300 font-bold mb-4">
+          YOUR SOUL'S TRUE ORIGIN
+        </h2>
+        
+        <div className="bg-[#0a0a2e]/70 border border-cyan-500/30 rounded-2xl p-6 backdrop-blur-sm mb-6">
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4">
+            You don't belong here. You've <span className="text-cyan-400 font-semibold">always felt it</span> — like you're watching life through a screen, disconnected from this reality.
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-zinc-300 leading-relaxed mb-4">
+            Your soul originated in <span className="text-[#00ff88] font-semibold">higher dimensions</span>. You volunteered to incarnate here, knowing you'd forget everything.
+          </p>
+          <p className="font-['Rajdhani'] text-base md:text-lg text-white leading-relaxed font-medium">
+            But forgetting was <span className="text-[#00ff88]">temporary</span>. The time for <span className="text-cyan-400">remembering</span> has arrived.
+          </p>
+        </div>
+        
+        <div className="flex justify-center gap-2 mb-4">
+          {["Ψ", "Ω", "∞", "Φ", "Σ"].map((symbol, i) => (
+            <span
+              key={i}
+              className="font-['Cinzel'] text-xl text-cyan-400/80 animate-pulse"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            >
+              {symbol}
+            </span>
+          ))}
+        </div>
+        
+        <div className="mt-4 animate-pulse">
+          <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
+            <span>TAP TO CONTINUE</span>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1319,7 +1577,7 @@ const SoulQuizSlide = ({ isActive, onComplete }: { isActive: boolean; onComplete
   const handleAnswer = (answer: string, index: number) => {
     // Instant visual feedback
     setSelectedOption(index);
-    playTapSound();
+    playAffirmationSound();
     triggerHaptic('medium');
     
     // Small delay before transitioning for visual feedback
@@ -1925,7 +2183,14 @@ const Index = () => {
   const [rubberBand, setRubberBand] = useState<'left' | 'right' | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   
-  const totalSlides = 8;
+  const totalSlides = 11;
+  const [soundMuted, setSoundMuted] = useState(false);
+  
+  // Toggle sound mute
+  const toggleMute = () => {
+    isMuted = !isMuted;
+    setSoundMuted(isMuted);
+  };
   
   // Handler for opening checkout modal with specific product
   const handleOpenCheckout = (productId: string, product: { name: string; price: string; description: string }) => {
@@ -1938,6 +2203,7 @@ const Index = () => {
     if (currentSlide < totalSlides - 1) {
       setSlideDirection('right');
       setIsAnimating(false);
+      playWhooshSound();
       setCurrentSlide(prev => prev + 1);
       setTimeout(() => setIsAnimating(true), 100);
     } else {
@@ -1952,6 +2218,7 @@ const Index = () => {
     if (currentSlide > 0) {
       setSlideDirection('left');
       setIsAnimating(false);
+      playWhooshSound();
       setCurrentSlide(prev => prev - 1);
       setTimeout(() => setIsAnimating(true), 100);
     } else {
@@ -2013,19 +2280,39 @@ const Index = () => {
       <ProgressBars currentSlide={currentSlide} totalSlides={totalSlides} isAnimating={isAnimating} />
       
       {/* Tap zones - disable for quiz and phone message slide */}
-      {currentSlide !== 3 && currentSlide !== 2 && (
+      {currentSlide !== 8 && currentSlide !== 2 && (
         <TapZones onPrev={goToPrevSlide} onNext={goToNextSlide} showHints={showHints} />
       )}
       
-      {/* Slides */}
+      {/* Mute button */}
+      <button
+        onClick={toggleMute}
+        className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-[#0a0a2e]/80 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-[#0a0a2e] transition-all"
+      >
+        {soundMuted ? (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+        )}
+      </button>
+      
+      {/* Slides - reordered: Hero, Divine, Phone, Wisdom x3, Book, Academy, Quiz, Archetype, Final */}
       <HeroSlide isActive={currentSlide === 0} />
       <DivineMessageSlide isActive={currentSlide === 1} />
       <PhoneMessageSlide isActive={currentSlide === 2} onAdvance={goToNextSlide} />
-      <SoulQuizSlide isActive={currentSlide === 3} onComplete={handleArchetypeComplete} />
-      <ArchetypeRevealSlide isActive={currentSlide === 4} archetype={archetype} />
-      <BookRevealSlide isActive={currentSlide === 5} onBookCheckout={handleOpenCheckout} />
-      <AcademySlide isActive={currentSlide === 6} onAcademyCheckout={handleOpenCheckout} />
-      <FinalCTASlide isActive={currentSlide === 7} onCheckout={() => handleOpenCheckout("awakening_bundle", {
+      <WisdomSlide1 isActive={currentSlide === 3} />
+      <WisdomSlide2 isActive={currentSlide === 4} />
+      <WisdomSlide3 isActive={currentSlide === 5} />
+      <BookRevealSlide isActive={currentSlide === 6} onBookCheckout={handleOpenCheckout} />
+      <AcademySlide isActive={currentSlide === 7} onAcademyCheckout={handleOpenCheckout} />
+      <SoulQuizSlide isActive={currentSlide === 8} onComplete={handleArchetypeComplete} />
+      <ArchetypeRevealSlide isActive={currentSlide === 9} archetype={archetype} />
+      <FinalCTASlide isActive={currentSlide === 10} onCheckout={() => handleOpenCheckout("awakening_bundle", {
         name: "Complete Awakening Bundle",
         price: "$197",
         description: "7-Book Series + Academy Access + Crystal Kit"
