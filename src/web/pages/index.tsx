@@ -450,6 +450,101 @@ const TapZones = ({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }
   );
 };
 
+// Dramatic CTA Button with bold challenge styling
+const DramaticCTA = ({ 
+  text, 
+  onClick, 
+  delay = 0,
+  variant = 'primary'
+}: { 
+  text: string; 
+  onClick?: () => void;
+  delay?: number;
+  variant?: 'primary' | 'secondary';
+}) => {
+  const [visible, setVisible] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+  
+  const handleClick = () => {
+    if (!onClick) return;
+    setIsPressed(true);
+    playSelectSound();
+    triggerHaptic('medium');
+    setTimeout(() => {
+      setIsPressed(false);
+      onClick();
+    }, 150);
+  };
+  
+  const isPrimary = variant === 'primary';
+  
+  return (
+    <div className={`transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <button
+        onClick={handleClick}
+        className={`
+          relative overflow-hidden font-mono text-sm md:text-base tracking-wider
+          px-8 py-4 border-2 transition-all duration-200
+          ${isPrimary 
+            ? 'bg-[#ff0040]/20 border-[#ff0040] text-[#ff0040] hover:bg-[#ff0040]/40 hover:text-white hover:shadow-[0_0_30px_rgba(255,0,64,0.5)]' 
+            : 'bg-[#00ff41]/10 border-[#00ff41]/60 text-[#00ff41] hover:bg-[#00ff41]/20 hover:border-[#00ff41] hover:shadow-[0_0_20px_rgba(0,255,65,0.3)]'
+          }
+          ${isPressed ? 'scale-95' : 'scale-100'}
+          animate-[dramaticPulse_2s_ease-in-out_infinite]
+        `}
+        style={{
+          textShadow: isPrimary ? '0 0 10px rgba(255,0,64,0.8)' : '0 0 10px rgba(0,255,65,0.5)',
+        }}
+      >
+        {/* Glowing border effect */}
+        <div className={`absolute inset-0 ${isPrimary ? 'bg-[#ff0040]' : 'bg-[#00ff41]'} opacity-20 blur-xl`} />
+        
+        {/* Scanning line effect */}
+        <div 
+          className={`absolute inset-0 ${isPrimary ? 'bg-gradient-to-r from-transparent via-[#ff0040]/30 to-transparent' : 'bg-gradient-to-r from-transparent via-[#00ff41]/20 to-transparent'}`}
+          style={{ animation: 'scanLine 2s linear infinite' }}
+        />
+        
+        {/* Button text */}
+        <span className="relative z-10 flex items-center justify-center gap-2">
+          <span className="animate-[flicker_3s_ease-in-out_infinite]">⟨</span>
+          {text}
+          <span className="animate-[flicker_3s_ease-in-out_infinite]" style={{ animationDelay: '0.5s' }}>⟩</span>
+        </span>
+      </button>
+    </div>
+  );
+};
+
+// Array of dramatic button texts to cycle through
+const dramaticTexts = {
+  continue: [
+    "I DARE TO KNOW",
+    "SHOW ME THE TRUTH", 
+    "I'M READY TO REMEMBER",
+    "REVEAL MORE",
+    "UNLOCK THE NEXT LAYER",
+    "CONTINUE THE TRANSMISSION"
+  ],
+  challenge: [
+    "I'M NOT AFRAID",
+    "TAKE ME DEEPER",
+    "I CAN HANDLE THIS",
+    "SHOW ME EVERYTHING"
+  ]
+};
+
+// Get dramatic text based on slide context
+const getDramaticText = (slideIndex: number): string => {
+  const texts = dramaticTexts.continue;
+  return texts[slideIndex % texts.length];
+};
+
 // Mute button
 const MuteButton = ({ muted, onToggle }: { muted: boolean; onToggle: () => void }) => (
   <button
@@ -547,12 +642,12 @@ const Slide1 = ({ isActive, onAdvance }: { isActive: boolean; onAdvance: () => v
               <GlitchText>You weren't supposed to find this.</GlitchText>
             </p>
             
-            <button
-              onClick={() => { playSelectSound(); onAdvance(); }}
-              className="font-mono text-[#00ff41] border border-[#00ff41]/50 px-8 py-3 hover:bg-[#00ff41]/10 hover:border-[#00ff41] transition-all animate-pulse"
-            >
-              [TAP TO CONTINUE]
-            </button>
+            <DramaticCTA 
+              text="I DARE TO KNOW" 
+              onClick={onAdvance}
+              delay={500}
+              variant="primary"
+            />
           </div>
         )}
       </div>
@@ -617,9 +712,11 @@ const Slide2 = ({ isActive }: { isActive: boolean }) => {
         )}
         
         <div className="mt-12 text-center">
-          <span className="font-mono text-[#00ff41]/40 text-sm animate-pulse">
-            [TAP TO CONTINUE →]
-          </span>
+          <DramaticCTA 
+            text="SHOW ME THE TRUTH" 
+            delay={8000}
+            variant="secondary"
+          />
         </div>
       </div>
     </div>
@@ -629,6 +726,7 @@ const Slide2 = ({ isActive }: { isActive: boolean }) => {
 // Slide 3: The Truth
 const Slide3 = ({ isActive }: { isActive: boolean }) => {
   const [visibleBullets, setVisibleBullets] = useState(0);
+  const [videoLoading, setVideoLoading] = useState(true);
   
   const truths = [
     "You are not from this dimension",
@@ -641,18 +739,22 @@ const Slide3 = ({ isActive }: { isActive: boolean }) => {
   useEffect(() => {
     if (!isActive) {
       setVisibleBullets(0);
+      setVideoLoading(true);
       return;
     }
     
     setVisibleBullets(0);
     const timers: NodeJS.Timeout[] = [];
     
+    // Show video after header
+    timers.push(setTimeout(() => setVideoLoading(false), 2000));
+    
     // Show header after initial delay, then bullets one by one
     truths.forEach((_, i) => {
       timers.push(setTimeout(() => {
         setVisibleBullets(i + 1);
         playSelectSound();
-      }, 2500 + i * 1500));
+      }, 4000 + i * 1500));
     });
     
     return () => timers.forEach(clearTimeout);
@@ -662,15 +764,118 @@ const Slide3 = ({ isActive }: { isActive: boolean }) => {
     <div className={`fixed inset-0 flex items-center justify-center transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
       <div className="relative z-10 px-6 max-w-2xl w-full">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-6">
           <h2 className="font-mono text-[#ff0040] text-lg tracking-[0.2em] mb-2">
             {isActive && <TypewriterText text="THE TRUTH THEY HID FROM YOU:" speed={50} />}
           </h2>
           <div className="w-full h-px bg-gradient-to-r from-transparent via-[#ff0040]/50 to-transparent" />
         </div>
         
+        {/* ==================================================================
+            VIDEO PLACEHOLDER - Replace the placeholder below with your HeyGen video
+            
+            To add your video:
+            1. Get your HeyGen video embed URL or MP4 URL
+            2. Replace the placeholder div below with either:
+            
+            For HeyGen embed (iframe):
+            <iframe 
+              src="YOUR_HEYGEN_EMBED_URL_HERE"
+              className="w-full aspect-video"
+              allowFullScreen
+            />
+            
+            For direct video file (mp4):
+            <video 
+              src="YOUR_VIDEO_URL_HERE"
+              className="w-full aspect-video"
+              controls
+              autoPlay
+              muted
+            />
+            
+            ================================================================== */}
+        <div className={`mb-6 transition-all duration-700 ${videoLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+          <div className="relative border-2 border-[#ff0040]/50 bg-black/70 aspect-video overflow-hidden group">
+            {/* Classified document stamp */}
+            <div className="absolute top-3 left-3 z-20">
+              <div className="font-mono text-[#ff0040] text-xs tracking-wider flex items-center gap-2">
+                <span className="animate-pulse">●</span>
+                <span>CLASSIFIED FILE</span>
+              </div>
+            </div>
+            
+            {/* File ID */}
+            <div className="absolute top-3 right-3 z-20">
+              <div className="font-mono text-[#00ff41]/50 text-xs">
+                VID-7777-TRUTH
+              </div>
+            </div>
+            
+            {/* Static/scan line effect overlay */}
+            <div className="absolute inset-0 z-10 pointer-events-none">
+              <div 
+                className="absolute inset-0 bg-gradient-to-b from-transparent via-[#00ff41]/5 to-transparent"
+                style={{ animation: 'scanLine 3s linear infinite' }}
+              />
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px)',
+                }}
+              />
+            </div>
+            
+            {/* Play button overlay */}
+            <div className="absolute inset-0 flex items-center justify-center z-30">
+              <div className="relative">
+                {/* Glowing ring */}
+                <div className="absolute inset-0 rounded-full border-2 border-[#ff0040] animate-ping opacity-30" 
+                     style={{ width: '100px', height: '100px', margin: '-50px 0 0 -50px', left: '50%', top: '50%' }} 
+                />
+                
+                {/* Play button */}
+                <button 
+                  className="w-20 h-20 rounded-full border-2 border-[#ff0040] bg-black/60 flex items-center justify-center hover:bg-[#ff0040]/20 transition-all group-hover:scale-110 hover:shadow-[0_0_30px_rgba(255,0,64,0.5)]"
+                  onClick={() => {
+                    // Video will play when HeyGen video is added
+                    playSelectSound();
+                    triggerHaptic('medium');
+                  }}
+                >
+                  <svg className="w-8 h-8 text-[#ff0040] ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Loading/transmission text */}
+            <div className="absolute bottom-3 left-3 right-3 z-20">
+              <div className="font-mono text-xs flex items-center justify-between">
+                <span className="text-[#00ff41]/70">
+                  <span className="animate-pulse">◈</span> VIDEO TRANSMISSION LOADING...
+                </span>
+                <span className="text-[#ff0040]/70">
+                  [DECRYPT TO VIEW]
+                </span>
+              </div>
+            </div>
+            
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: `
+                  radial-gradient(circle at 20% 30%, rgba(255,0,64,0.3) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 70%, rgba(0,255,65,0.2) 0%, transparent 40%)
+                `,
+              }}
+            />
+          </div>
+        </div>
+        
         {/* Truth bullets */}
-        <div className="space-y-4 font-mono">
+        <div className="space-y-3 font-mono">
           {truths.map((truth, i) => (
             <div 
               key={i}
@@ -679,17 +884,19 @@ const Slide3 = ({ isActive }: { isActive: boolean }) => {
               }`}
             >
               <span className="text-[#00ff41] mt-1">▸</span>
-              <span className={`text-lg ${i < visibleBullets ? 'text-white/90' : ''}`}>
+              <span className={`text-base ${i < visibleBullets ? 'text-white/90' : ''}`}>
                 {truth}
               </span>
             </div>
           ))}
         </div>
         
-        <div className="mt-12 text-center">
-          <span className="font-mono text-[#00ff41]/40 text-sm animate-pulse">
-            [TAP TO CONTINUE →]
-          </span>
+        <div className="mt-8 text-center">
+          <DramaticCTA 
+            text="I'M READY TO REMEMBER" 
+            delay={12000}
+            variant="primary"
+          />
         </div>
       </div>
     </div>
@@ -766,9 +973,11 @@ const Slide4 = ({ isActive }: { isActive: boolean }) => {
         </div>
         
         <div className="mt-8 text-center">
-          <span className="font-mono text-[#00ff41]/40 text-sm animate-pulse">
-            [TAP TO CONTINUE →]
-          </span>
+          <DramaticCTA 
+            text="REVEAL MORE" 
+            delay={500}
+            variant="secondary"
+          />
         </div>
       </div>
     </div>
@@ -829,9 +1038,11 @@ const Slide5 = ({ isActive }: { isActive: boolean }) => {
         </div>
         
         <div className="mt-8 text-center">
-          <span className="font-mono text-[#00ff41]/40 text-sm animate-pulse">
-            [TAP TO CONTINUE →]
-          </span>
+          <DramaticCTA 
+            text="UNLOCK THE NEXT LAYER" 
+            delay={500}
+            variant="primary"
+          />
         </div>
       </div>
     </div>
@@ -975,9 +1186,11 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
         )}
         
         <div className="mt-8 text-center">
-          <span className="font-mono text-[#00ff41]/40 text-sm animate-pulse">
-            [TAP TO CONTINUE →]
-          </span>
+          <DramaticCTA 
+            text="CONTINUE THE TRANSMISSION" 
+            delay={500}
+            variant="secondary"
+          />
         </div>
       </div>
     </div>
