@@ -1,4 +1,29 @@
-import { useState, useEffect, useRef, useCallback, FormEvent } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// Checkout helper function - calls API to get Stripe checkout URL
+const initiateCheckout = async (productId: string): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productId }),
+    });
+    
+    const data = await response.json();
+    
+    if (data.url) {
+      return data.url;
+    }
+    
+    console.error('No checkout URL returned:', data);
+    return null;
+  } catch (error) {
+    console.error('Checkout error:', error);
+    return null;
+  }
+};
 
 // Matrix rain character set
 const MATRIX_CHARS = "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズヅブプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン0123456789ΨΩΦΣΠΘΞΛΚΙΗΖΕΔΓΒΑ∞∑∏√∂∫≈≠≤≥÷×±∓∴∵∝∅∈∉⊂⊃⊆⊇∪∩";
@@ -188,10 +213,11 @@ const TypewriterText = ({ text, className = "", delay = 0, speed = 50 }: { text:
   );
 };
 
-// Checkout Modal Component
+// Checkout Modal Component - Redirects to Stripe
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  productId: string;
   product: {
     name: string;
     price: string;
@@ -199,32 +225,31 @@ interface CheckoutModalProps {
   };
 }
 
-const CheckoutModal = ({ isOpen, onClose, product }: CheckoutModalProps) => {
-  const [email, setEmail] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal">("stripe");
-  const [submitted, setSubmitted] = useState(false);
+const CheckoutModal = ({ isOpen, onClose, productId, product }: CheckoutModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setEmail("");
-      setPaymentMethod("stripe");
-      setSubmitted(false);
       setLoading(false);
+      setError(null);
     }
   }, [isOpen]);
   
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    
+  const handleCheckout = async () => {
     setLoading(true);
-    // Simulate processing
-    setTimeout(() => {
+    setError(null);
+    
+    const checkoutUrl = await initiateCheckout(productId);
+    
+    if (checkoutUrl) {
+      // Redirect to Stripe checkout
+      window.location.href = checkoutUrl;
+    } else {
+      setError("Unable to start checkout. Please try again.");
       setLoading(false);
-      setSubmitted(true);
-    }, 1500);
+    }
   };
   
   if (!isOpen) return null;
@@ -256,146 +281,70 @@ const CheckoutModal = ({ isOpen, onClose, product }: CheckoutModalProps) => {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-[#00ff88] to-cyan-500" />
         
         <div className="p-6">
-          {!submitted ? (
-            <>
-              {/* Header */}
-              <div className="text-center mb-6">
-                <div className="text-3xl mb-3">⚡</div>
-                <h3 className="font-['Orbitron'] text-lg text-[#00ff88] mb-2">
-                  SECURE CHECKOUT
-                </h3>
-                <p className="font-['Rajdhani'] text-zinc-400 text-sm">
-                  Complete your order to begin the awakening
-                </p>
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="text-3xl mb-3">⚡</div>
+            <h3 className="font-['Orbitron'] text-lg text-[#00ff88] mb-2">
+              SECURE CHECKOUT
+            </h3>
+            <p className="font-['Rajdhani'] text-zinc-400 text-sm">
+              Complete your order to begin the awakening
+            </p>
+          </div>
+          
+          {/* Order summary */}
+          <div className="bg-[#050510]/60 border border-purple-500/20 rounded-xl p-4 mb-6">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h4 className="font-['Orbitron'] text-white text-sm">{product.name}</h4>
+                <p className="font-['Rajdhani'] text-zinc-500 text-xs">{product.description}</p>
               </div>
-              
-              {/* Order summary */}
-              <div className="bg-[#050510]/60 border border-purple-500/20 rounded-xl p-4 mb-6">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-['Orbitron'] text-white text-sm">{product.name}</h4>
-                    <p className="font-['Rajdhani'] text-zinc-500 text-xs">{product.description}</p>
-                  </div>
-                  <span className="font-['Orbitron'] text-[#00ff88] text-lg">{product.price}</span>
-                </div>
-              </div>
-              
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email */}
-                <div>
-                  <label className="block font-['Rajdhani'] text-zinc-400 text-sm mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    required
-                    className="w-full bg-[#0a0a1f] border border-purple-500/30 rounded-lg px-4 py-3 font-['Rajdhani'] text-white placeholder-zinc-600 focus:outline-none focus:border-[#00ff88]/50 transition-colors"
-                  />
-                </div>
-                
-                {/* Payment method */}
-                <div>
-                  <label className="block font-['Rajdhani'] text-zinc-400 text-sm mb-2">
-                    Payment Method
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("stripe")}
-                      className={`p-3 rounded-lg border transition-all duration-200 flex items-center justify-center gap-2 ${
-                        paymentMethod === "stripe" 
-                          ? "bg-[#00ff88]/10 border-[#00ff88]/50 text-white" 
-                          : "bg-[#0a0a1f] border-purple-500/20 text-zinc-400 hover:border-purple-500/40"
-                      }`}
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-                      </svg>
-                      <span className="font-['Rajdhani'] text-sm">Card</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("paypal")}
-                      className={`p-3 rounded-lg border transition-all duration-200 flex items-center justify-center gap-2 ${
-                        paymentMethod === "paypal" 
-                          ? "bg-[#00ff88]/10 border-[#00ff88]/50 text-white" 
-                          : "bg-[#0a0a1f] border-purple-500/20 text-zinc-400 hover:border-purple-500/40"
-                      }`}
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.026-2.617 4.467-5.96 4.467h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106H7.076l-.04.254a.641.641 0 0 0 .633.74h3.44c.456 0 .846-.335.918-.788l.037-.196.73-4.627.047-.255c.072-.453.462-.788.917-.788h.578c3.742 0 6.672-1.52 7.528-5.916.357-1.833.173-3.366-.642-4.44z"/>
-                      </svg>
-                      <span className="font-['Rajdhani'] text-sm">PayPal</span>
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  disabled={loading || !email}
-                  className="w-full py-4 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🔒</span>
-                      <span>Complete Order</span>
-                    </>
-                  )}
-                </button>
-              </form>
-              
-              {/* Trust badges */}
-              <div className="flex justify-center gap-4 mt-4 text-zinc-500 text-xs font-['Rajdhani']">
-                <span>🔐 Secure</span>
-                <span>⚡ Instant Access</span>
-                <span>✨ 30-Day Guarantee</span>
-              </div>
-            </>
-          ) : (
-            /* Success State */
-            <div className="text-center py-8">
-              <div className="relative inline-block mb-6">
-                <div className="text-6xl animate-pulse">✨</div>
-                <div className="absolute -inset-4 bg-[#00ff88]/20 rounded-full blur-xl animate-pulse" />
-              </div>
-              
-              <h3 className="font-['Orbitron'] text-xl text-[#00ff88] mb-3">
-                EMAIL RECEIVED
-              </h3>
-              
-              <p className="font-['Rajdhani'] text-zinc-300 mb-6 leading-relaxed">
-                Thank you for your interest, awakened one!<br />
-                <span className="text-[#00ff88]">{email}</span> has been saved.
-              </p>
-              
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-amber-400">⚠</span>
-                  <span className="font-['Orbitron'] text-amber-400 text-sm">COMING SOON</span>
-                </div>
-                <p className="font-['Rajdhani'] text-zinc-400 text-sm">
-                  Payment integration is being activated. You'll receive an email when we're ready to process your awakening!
-                </p>
-              </div>
-              
-              <button
-                onClick={onClose}
-                className="font-['Rajdhani'] text-[#00ff88] hover:text-white transition-colors"
-              >
-                Return to Portal →
-              </button>
+              <span className="font-['Orbitron'] text-[#00ff88] text-lg">{product.price}</span>
+            </div>
+          </div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
+              <p className="font-['Rajdhani'] text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
+          
+          {/* Checkout button */}
+          <button
+            onClick={handleCheckout}
+            disabled={loading}
+            className="w-full py-4 font-['Orbitron'] text-sm font-bold text-white bg-gradient-to-r from-purple-600 via-[#00ff88]/70 to-cyan-500 rounded-xl transition-all duration-300 hover:scale-[1.02] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Connecting to Stripe...</span>
+              </>
+            ) : (
+              <>
+                <span>🔒</span>
+                <span>Proceed to Payment</span>
+              </>
+            )}
+          </button>
+          
+          {/* Trust badges */}
+          <div className="flex justify-center gap-4 mt-4 text-zinc-500 text-xs font-['Rajdhani']">
+            <span>🔐 Stripe Secure</span>
+            <span>⚡ Instant Access</span>
+            <span>✨ 30-Day Guarantee</span>
+          </div>
+          
+          {/* Powered by Stripe */}
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2 text-zinc-600 text-xs">
+              <span>Powered by</span>
+              <svg className="h-4" viewBox="0 0 60 25" fill="currentColor">
+                <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.02 1.04-.06 1.48zm-6.3-5.63c-1.03 0-1.99.73-2.1 2.25h4.19c-.12-1.46-.97-2.25-2.09-2.25zM41.8 20.57V8.24h4.09v12.33H41.8zm2.05-13.72c-1.3 0-2.35-1.07-2.35-2.37 0-1.3 1.05-2.36 2.35-2.36 1.3 0 2.35 1.06 2.35 2.36 0 1.3-1.05 2.37-2.35 2.37zM33.75 5.97V2.4L38 1.13v3.57l-4.25 1.27zM33.81 20.57V8.24h4.09v12.33h-4.09zM20.92 20.57V8.24h3.97v1.65a4.7 4.7 0 0 1 4.05-1.93c2.57 0 4.47 1.97 4.47 5.68v6.93h-4.1v-5.93c0-1.9-.72-2.84-2.01-2.84-1.45 0-2.28 1.11-2.28 2.84v5.93h-4.1zM16.73 5.97V2.4L21 1.13v3.57l-4.27 1.27zM16.8 20.57V8.24h4.09v12.33H16.8zM0 20.57V1.82h4.1v7.26c.76-.84 2.19-1.38 3.72-1.38 3.04 0 5.51 2.64 5.51 6.55 0 3.92-2.72 6.55-5.73 6.55-1.43 0-2.88-.65-3.61-1.65v1.42H0zm6.98-8.54c-1.49 0-2.88 1.3-2.88 3.05 0 1.74 1.33 3.04 2.88 3.04 1.5 0 2.82-1.26 2.82-3.04 0-1.79-1.33-3.05-2.82-3.05z"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -987,8 +936,22 @@ const ArchetypeRevealSlide = ({ isActive, archetype }: { isActive: boolean; arch
   );
 };
 
-// SLIDE 6: Book Reveal
-const BookRevealSlide = ({ isActive }: { isActive: boolean }) => {
+// SLIDE 6: Book Reveal with Stripe Checkout Buttons
+const BookRevealSlide = ({ isActive, onBookCheckout }: { isActive: boolean; onBookCheckout: (productId: string, product: {name: string; price: string; description: string}) => void }) => {
+  const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
+  
+  const handleBookPurchase = async (productId: string, name: string, price: string) => {
+    setLoadingProduct(productId);
+    const checkoutUrl = await initiateCheckout(productId);
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
+    } else {
+      setLoadingProduct(null);
+      // Fallback to modal
+      onBookCheckout(productId, { name, price, description: "Cosmic Soul Quest Book" });
+    }
+  };
+  
   return (
     <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div 
@@ -1007,7 +970,7 @@ const BookRevealSlide = ({ isActive }: { isActive: boolean }) => {
         </span>
         
         {/* Book cover */}
-        <div className="relative mx-auto w-48 md:w-56 mb-6">
+        <div className="relative mx-auto w-40 md:w-48 mb-4">
           <div className="absolute -inset-4 bg-gradient-to-r from-purple-600/30 via-[#00ff88]/20 to-cyan-500/30 rounded-2xl blur-xl opacity-60 animate-pulse" />
           <div className="relative bg-gradient-to-br from-[#1a0a2e] via-[#0a0a2e] to-[#050520] rounded-xl overflow-hidden aspect-[3/4] border border-purple-500/30 shadow-2xl p-4">
             <div className="h-full flex flex-col items-center justify-center">
@@ -1016,7 +979,7 @@ const BookRevealSlide = ({ isActive }: { isActive: boolean }) => {
                 <span className="text-purple-400 mx-1">✧</span>
                 <span className="text-cyan-400">☽</span>
               </div>
-              <h3 className="font-['Cinzel'] text-xl text-transparent bg-clip-text bg-gradient-to-b from-[#00ff88] via-purple-300 to-cyan-400 font-bold">
+              <h3 className="font-['Cinzel'] text-lg text-transparent bg-clip-text bg-gradient-to-b from-[#00ff88] via-purple-300 to-cyan-400 font-bold">
                 COSMIC<br/>SOUL<br/>QUEST
               </h3>
               <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-[#00ff88] to-transparent my-2" />
@@ -1027,21 +990,51 @@ const BookRevealSlide = ({ isActive }: { isActive: boolean }) => {
           </div>
         </div>
         
-        <h2 className="font-['Cinzel'] text-2xl md:text-3xl text-white font-bold mb-4">
+        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-white font-bold mb-2">
           Cosmic Soul Quest
         </h2>
         
-        <p className="font-['Rajdhani'] text-base text-zinc-300 leading-relaxed mb-6 max-w-sm mx-auto">
+        <p className="font-['Rajdhani'] text-sm text-zinc-300 leading-relaxed mb-4 max-w-sm mx-auto">
           A teenage boy discovers his soul is from another dimension. He's part of an ancient group of <span className="text-[#00ff88]">seven cosmic warriors</span> who must reunite.
         </p>
         
-        <div className="flex justify-center gap-4 text-sm font-['Rajdhani'] mb-6">
-          <span className="text-zinc-400"><span className="text-[#00ff88]">$14.99</span> Digital</span>
-          <span className="text-zinc-500">|</span>
-          <span className="text-zinc-400"><span className="text-purple-300">$24.99</span> Paperback</span>
+        {/* Pricing buttons */}
+        <div className="grid grid-cols-3 gap-2 mb-4 pointer-events-auto">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_digital', 'Digital Edition', '$14.99'); }}
+            disabled={loadingProduct !== null}
+            className="bg-[#0a0a2e]/80 border border-[#00ff88]/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-[#00ff88]/60 disabled:opacity-50"
+          >
+            <span className="block text-lg mb-1">📱</span>
+            <span className="block font-['Orbitron'] text-[#00ff88] text-sm font-bold">$14.99</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs">Digital</span>
+            {loadingProduct === 'book_digital' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
+          
+          <button
+            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_paperback', 'Paperback Edition', '$24.99'); }}
+            disabled={loadingProduct !== null}
+            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-purple-500/60 disabled:opacity-50"
+          >
+            <span className="block text-lg mb-1">📚</span>
+            <span className="block font-['Orbitron'] text-purple-300 text-sm font-bold">$24.99</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs">Paperback</span>
+            {loadingProduct === 'book_paperback' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
+          
+          <button
+            onClick={(e) => { e.stopPropagation(); handleBookPurchase('book_collector', "Collector's Edition", '$39.99'); }}
+            disabled={loadingProduct !== null}
+            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-105 hover:border-amber-500/70 disabled:opacity-50"
+          >
+            <span className="block text-lg mb-1">✨</span>
+            <span className="block font-['Orbitron'] text-amber-300 text-sm font-bold">$39.99</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs">Collector's</span>
+            {loadingProduct === 'book_collector' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
         </div>
         
-        <div className="mt-4 animate-pulse">
+        <div className="mt-2 animate-pulse">
           <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
             <span>TAP TO CONTINUE</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1054,8 +1047,22 @@ const BookRevealSlide = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-// SLIDE 7: Academy
-const AcademySlide = ({ isActive }: { isActive: boolean }) => {
+// SLIDE 7: Academy with Stripe Subscription Buttons
+const AcademySlide = ({ isActive, onAcademyCheckout }: { isActive: boolean; onAcademyCheckout: (productId: string, product: {name: string; price: string; description: string}) => void }) => {
+  const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
+  
+  const handleAcademySubscribe = async (productId: string, name: string, price: string) => {
+    setLoadingProduct(productId);
+    const checkoutUrl = await initiateCheckout(productId);
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
+    } else {
+      setLoadingProduct(null);
+      // Fallback to modal
+      onAcademyCheckout(productId, { name, price, description: "Monthly subscription to Galactic Star Crystal Academy" });
+    }
+  };
+  
   return (
     <div className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-16 transition-all duration-700 ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
       <div 
@@ -1069,33 +1076,71 @@ const AcademySlide = ({ isActive }: { isActive: boolean }) => {
       <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/95 via-[#050510]/85 to-[#050510]/95" />
       
       <div className="relative z-10 max-w-lg mx-auto text-center">
-        <h2 className="font-['Cinzel'] text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-bold mb-4"
+        <h2 className="font-['Cinzel'] text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-bold mb-3"
           style={{ textShadow: "0 0 40px rgba(255, 200, 0, 0.3)" }}
         >
           GALACTIC STAR CRYSTAL<br/>ACADEMY
         </h2>
         
-        <p className="font-['Rajdhani'] text-base text-zinc-300 mb-6">
+        <p className="font-['Rajdhani'] text-sm text-zinc-300 mb-4">
           Advanced training for awakened souls. Learn the <span className="text-amber-300">seven secret steps</span> to remember who you truly are.
         </p>
         
-        {/* Featured tier */}
-        <div className="bg-gradient-to-br from-purple-900/60 via-[#0a0a2e] to-cyan-900/40 border-2 border-[#00ff88]/50 rounded-2xl p-6 mb-6">
-          <span className="text-3xl mb-2 block">✧</span>
-          <h3 className="font-['Orbitron'] text-lg text-[#00ff88] mb-2">Warrior Path</h3>
-          <div className="font-['Orbitron'] text-3xl font-black text-white mb-2">$97<span className="text-base text-zinc-400">/mo</span></div>
-          <ul className="space-y-2 text-left font-['Rajdhani'] text-zinc-300 text-sm">
-            <li><span className="text-[#00ff88] mr-2">✦</span>Advanced frequency training</li>
-            <li><span className="text-[#00ff88] mr-2">✦</span>Monthly 1-on-1 guidance</li>
-            <li><span className="text-[#00ff88] mr-2">✦</span>Crystal activation ceremony</li>
-          </ul>
+        {/* Pricing tiers */}
+        <div className="grid grid-cols-3 gap-2 mb-4 pointer-events-auto">
+          {/* Initiate */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_initiate', 'Initiate Path', '$47/mo'); }}
+            disabled={loadingProduct !== null}
+            className="bg-[#0a0a2e]/80 border border-purple-500/30 rounded-xl p-3 transition-all hover:scale-105 hover:border-purple-500/60 disabled:opacity-50"
+          >
+            <span className="block text-lg mb-1">🌟</span>
+            <span className="block font-['Orbitron'] text-purple-300 text-xs font-bold">$47</span>
+            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Initiate</span>
+            {loadingProduct === 'academy_initiate' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
+          
+          {/* Warrior - Featured */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_warrior', 'Warrior Path', '$97/mo'); }}
+            disabled={loadingProduct !== null}
+            className="bg-gradient-to-br from-purple-900/60 via-[#0a0a2e] to-cyan-900/40 border-2 border-[#00ff88]/50 rounded-xl p-3 transition-all hover:scale-105 hover:border-[#00ff88]/70 disabled:opacity-50 relative"
+          >
+            <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#00ff88] text-black text-[8px] font-['Orbitron'] px-2 py-0.5 rounded-full">POPULAR</span>
+            <span className="block text-lg mb-1">⚔️</span>
+            <span className="block font-['Orbitron'] text-[#00ff88] text-xs font-bold">$97</span>
+            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Warrior</span>
+            {loadingProduct === 'academy_warrior' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
+          
+          {/* Master */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleAcademySubscribe('academy_master', 'Master Path', '$197/mo'); }}
+            disabled={loadingProduct !== null}
+            className="bg-gradient-to-br from-amber-900/40 to-[#0a0a2e]/80 border border-amber-500/40 rounded-xl p-3 transition-all hover:scale-105 hover:border-amber-500/70 disabled:opacity-50"
+          >
+            <span className="block text-lg mb-1">👁️</span>
+            <span className="block font-['Orbitron'] text-amber-300 text-xs font-bold">$197</span>
+            <span className="block font-['Rajdhani'] text-zinc-500 text-[10px]">/month</span>
+            <span className="block font-['Rajdhani'] text-zinc-400 text-xs mt-1">Master</span>
+            {loadingProduct === 'academy_master' && <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin mx-auto mt-1" />}
+          </button>
         </div>
         
-        <div className="flex justify-center gap-6 opacity-50 mb-6">
+        {/* Features summary */}
+        <div className="bg-[#0a0a1f]/60 border border-purple-500/20 rounded-xl p-3 mb-4">
+          <p className="font-['Rajdhani'] text-xs text-zinc-400">
+            <span className="text-[#00ff88]">✦</span> Advanced frequency training • <span className="text-[#00ff88]">✦</span> 1-on-1 guidance • <span className="text-[#00ff88]">✦</span> Crystal activation
+          </p>
+        </div>
+        
+        <div className="flex justify-center gap-4 opacity-50 mb-4">
           {["☉", "☽", "✧", "◈", "✧", "☽", "☉"].map((symbol, i) => (
             <span 
               key={i}
-              className="text-amber-400 text-lg animate-pulse"
+              className="text-amber-400 text-sm animate-pulse"
               style={{ animationDelay: `${i * 0.2}s` }}
             >
               {symbol}
@@ -1103,7 +1148,7 @@ const AcademySlide = ({ isActive }: { isActive: boolean }) => {
           ))}
         </div>
         
-        <div className="mt-4 animate-pulse">
+        <div className="mt-2 animate-pulse">
           <div className="inline-flex items-center gap-2 text-white/50 font-['Rajdhani']">
             <span>TAP TO CONTINUE</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1270,14 +1315,20 @@ const Index = () => {
   const [isAnimating, setIsAnimating] = useState(true);
   const [showHints, setShowHints] = useState(true);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  
-  const totalSlides = 8;
-  
-  // Product data for checkout
-  const bundleProduct = {
+  const [checkoutProductId, setCheckoutProductId] = useState("awakening_bundle");
+  const [checkoutProduct, setCheckoutProduct] = useState({
     name: "Complete Awakening Bundle",
     price: "$197",
     description: "7-Book Series + Academy Access + Crystal Kit"
+  });
+  
+  const totalSlides = 8;
+  
+  // Handler for opening checkout modal with specific product
+  const handleOpenCheckout = (productId: string, product: { name: string; price: string; description: string }) => {
+    setCheckoutProductId(productId);
+    setCheckoutProduct(product);
+    setCheckoutOpen(true);
   };
   
   const goToNextSlide = useCallback(() => {
@@ -1348,9 +1399,13 @@ const Index = () => {
       <PhoneMessageSlide isActive={currentSlide === 2} onAdvance={goToNextSlide} />
       <SoulQuizSlide isActive={currentSlide === 3} onComplete={handleArchetypeComplete} />
       <ArchetypeRevealSlide isActive={currentSlide === 4} archetype={archetype} />
-      <BookRevealSlide isActive={currentSlide === 5} />
-      <AcademySlide isActive={currentSlide === 6} />
-      <FinalCTASlide isActive={currentSlide === 7} onCheckout={() => setCheckoutOpen(true)} />
+      <BookRevealSlide isActive={currentSlide === 5} onBookCheckout={handleOpenCheckout} />
+      <AcademySlide isActive={currentSlide === 6} onAcademyCheckout={handleOpenCheckout} />
+      <FinalCTASlide isActive={currentSlide === 7} onCheckout={() => handleOpenCheckout("awakening_bundle", {
+        name: "Complete Awakening Bundle",
+        price: "$197",
+        description: "7-Book Series + Academy Access + Crystal Kit"
+      })} />
       
       {/* Global animations */}
       <style>{`
@@ -1386,7 +1441,8 @@ const Index = () => {
       <CheckoutModal 
         isOpen={checkoutOpen} 
         onClose={() => setCheckoutOpen(false)} 
-        product={bundleProduct}
+        productId={checkoutProductId}
+        product={checkoutProduct}
       />
     </>
   );
