@@ -26,86 +26,21 @@ const getAudioContext = () => {
   return audioContext;
 };
 
-// Glitch/static burst sound
+// Glitch/static burst sound - DISABLED (keeping ambient sounds only)
 const playGlitchSound = () => {
-  if (isMuted) return;
-  try {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-    
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(100 + Math.random() * 300, now);
-    osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-    
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, now);
-    
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-    
-    osc.start(now);
-    osc.stop(now + 0.1);
-  } catch {}
+  // Sound removed per user request - text appearing should be silent
 };
 
 
 
-// Transition whoosh
+// Transition whoosh - DISABLED (keeping ambient sounds only)
 const playTransitionSound = () => {
-  if (isMuted) return;
-  try {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-    
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-    osc.type = 'sine';
-    
-    gain.gain.setValueAtTime(0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-    
-    osc.start(now);
-    osc.stop(now + 0.25);
-  } catch {}
+  // Sound removed per user request - keeping only ambient background sounds
 };
 
-// Selection confirmation
+// Selection confirmation - DISABLED (keeping ambient sounds only)
 const playSelectSound = () => {
-  if (isMuted) return;
-  try {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-    
-    [440, 660].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.frequency.setValueAtTime(freq, now + i * 0.08);
-      osc.type = 'sine';
-      
-      gain.gain.setValueAtTime(0.06, now + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.15);
-      
-      osc.start(now + i * 0.08);
-      osc.stop(now + i * 0.08 + 0.15);
-    });
-  } catch {}
+  // Sound removed per user request - keeping only ambient background sounds
 };
 
 // Create noise buffer
@@ -119,7 +54,7 @@ const createNoiseBuffer = (ctx: AudioContext, duration: number) => {
   return buffer;
 };
 
-// Start ambient sounds
+// Start ambient sounds (static + electronic hum only)
 const startAmbientSound = () => {
   if (ambientStarted || isMuted) return;
   
@@ -163,13 +98,7 @@ const startAmbientSound = () => {
     lowHum.start();
     ambientNodes.lowHum = lowHum;
     
-    // Random glitch bursts
-    const scheduleGlitch = () => {
-      if (!ambientStarted || isMuted) return;
-      playGlitchSound();
-      setTimeout(scheduleGlitch, 4000 + Math.random() * 8000);
-    };
-    setTimeout(scheduleGlitch, 3000);
+    // Note: Random glitch bursts removed - keeping only continuous ambient sounds
     
     ambientStarted = true;
   } catch {}
