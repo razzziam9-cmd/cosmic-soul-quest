@@ -1116,7 +1116,7 @@ const getChakraStatus = (score: number): ChakraResult['status'] => {
   return 'blocked';
 };
 
-// Chakra text results component - simple list format
+// Chakra text results component - classified report format (no visuals)
 const ChakraTextResults = ({ results }: { results: ChakraResult[] }) => {
   const getStatusText = (status: ChakraResult['status']) => {
     switch (status) {
@@ -1128,59 +1128,63 @@ const ChakraTextResults = ({ results }: { results: ChakraResult[] }) => {
   };
   
   const getRecommendation = (chakra: string, status: ChakraResult['status']) => {
-    if (status === 'balanced') return 'Energy flowing harmoniously';
+    if (status === 'balanced') return 'Your energy flows freely in this center.';
     
     const recommendations: Record<string, string> = {
-      'ROOT': 'You need grounding work - connect with nature, walk barefoot, meditate on stability',
-      'SACRAL': 'Creative expression needed - engage in art, movement, emotional release work',
-      'SOLAR PLEXUS': 'Personal power restoration required - set boundaries, practice self-affirmation',
-      'HEART': 'Heart healing necessary - practice self-love, forgiveness, compassion meditation',
-      'THROAT': 'Communication work needed - speak your truth, journaling, singing or chanting',
-      'THIRD EYE': 'Intuition development required - meditation, dream work, trust inner guidance',
-      'CROWN': 'Spiritual connection needed - meditation, prayer, connection to higher purpose'
+      'ROOT': 'You need grounding work - connect with nature and meditate on stability.',
+      'SACRAL': 'Creative expression needed - engage in art, movement, emotional release.',
+      'SOLAR PLEXUS': 'Personal power restoration required - set boundaries, practice self-affirmation.',
+      'HEART': 'Heart healing necessary - practice self-love, forgiveness, compassion.',
+      'THROAT': 'Communication work needed - speak your truth, practice journaling.',
+      'THIRD EYE': 'Intuition development required - meditation, dream work, trust inner guidance.',
+      'CROWN': 'Spiritual connection needed - meditation, prayer, connection to higher purpose.'
     };
-    return recommendations[chakra] || 'Energy realignment recommended';
+    return recommendations[chakra] || 'Energy realignment recommended.';
   };
   
   return (
-    <div className="space-y-4 max-w-xl mx-auto">
-      <div className="font-mono text-center text-[#00ff41]/60 text-xs tracking-wider mb-6 border-b border-[#00ff41]/20 pb-4">
-        ═══════ CHAKRA DIAGNOSTIC REPORT ═══════
+    <div className="font-mono max-w-xl mx-auto border border-[#00ff41]/30 bg-black/70 p-6">
+      {/* Report Header */}
+      <div className="text-center border-b border-[#00ff41]/30 pb-4 mb-6">
+        <div className="text-[#ff0040] text-xs tracking-[0.3em] mb-2">▼ CLASSIFIED ▼</div>
+        <div className="text-[#00ff41] text-sm tracking-wider">CHAKRA DIAGNOSTIC REPORT</div>
+        <div className="text-white/30 text-xs mt-1">SUBJECT: COSMIC WARRIOR CANDIDATE</div>
       </div>
-      {results.map((result, index) => (
-        <div 
-          key={result.chakra}
-          className="font-mono animate-[fadeIn_0.5s_ease-out] border-l-4 pl-4 py-2"
-          style={{ 
-            animationDelay: `${index * 0.15}s`,
-            borderColor: result.status === 'blocked' ? '#ff0040' 
-              : result.status === 'unbalanced' ? '#ff6b35'
-              : result.status === 'slightly-unbalanced' ? '#eab308'
-              : '#00ff41'
-          }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span 
-              className="text-sm font-bold tracking-wider"
-              style={{ color: result.color }}
-            >
-              {result.chakra} CHAKRA
-            </span>
-            <span className="text-white/30 text-xs">({result.chakraName})</span>
+      
+      {/* Results List - Pure Text */}
+      <div className="space-y-4">
+        {results.map((result, index) => (
+          <div 
+            key={result.chakra}
+            className="animate-[fadeIn_0.3s_ease-out] pb-3 border-b border-white/10 last:border-b-0"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-white/90 text-sm tracking-wider">
+                {result.chakra} CHAKRA
+              </span>
+              <span className={`text-xs font-bold tracking-wider ${
+                result.status === 'blocked' ? 'text-[#ff0040]'
+                : result.status === 'unbalanced' ? 'text-[#ff6b35]'
+                : result.status === 'slightly-unbalanced' ? 'text-yellow-500'
+                : 'text-[#00ff41]'
+              }`}>
+                [{getStatusText(result.status)}]
+              </span>
+            </div>
+            <div className="text-white/50 text-xs leading-relaxed pl-2">
+              {getRecommendation(result.chakra, result.status)}
+            </div>
           </div>
-          <div className={`text-sm font-bold mb-1 ${
-            result.status === 'blocked' ? 'text-[#ff0040]'
-            : result.status === 'unbalanced' ? 'text-[#ff6b35]'
-            : result.status === 'slightly-unbalanced' ? 'text-yellow-500'
-            : 'text-[#00ff41]'
-          }`}>
-            STATUS: {getStatusText(result.status)}
-          </div>
-          <div className="text-white/50 text-xs leading-relaxed">
-            → {getRecommendation(result.chakra, result.status)}
-          </div>
+        ))}
+      </div>
+      
+      {/* Report Footer */}
+      <div className="mt-6 pt-4 border-t border-[#00ff41]/30 text-center">
+        <div className="text-[#00ff41]/40 text-xs">
+          ── END OF REPORT ──
         </div>
-      ))}
+      </div>
     </div>
   );
 };
@@ -1271,8 +1275,8 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
         {/* INTRO PHASE */}
         {phase === 'intro' && (
           <div className="text-center animate-[fadeIn_0.8s_ease-out]">
-            <div className="font-mono text-[#ff0040] text-xs tracking-[0.3em] mb-4 animate-pulse">
-              ⚠ CHAKRA DIAGNOSTIC INITIATED ⚠
+            <div className="font-mono text-[#ff0040] text-xs tracking-[0.3em] mb-4">
+              ▼ DIAGNOSTIC INITIATED ▼
             </div>
             
             <h2 className="font-mono text-2xl md:text-3xl text-[#00ff41] mb-6">
@@ -1290,28 +1294,13 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
               </p>
             </div>
             
-            {/* Preview chakra symbols */}
-            <div className="flex justify-center gap-3 mb-8">
-              {chakraQuestions.map((q, i) => (
-                <div 
-                  key={q.chakra}
-                  className="w-6 h-6 rounded-full animate-pulse"
-                  style={{ 
-                    backgroundColor: q.color,
-                    animationDelay: `${i * 0.15}s`,
-                    boxShadow: `0 0 10px ${q.color}40`
-                  }}
-                />
-              ))}
-            </div>
-            
             <button
               onClick={handleStartQuiz}
               className="font-mono px-8 py-4 border-2 border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41] 
                          hover:bg-[#00ff41]/30 hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] 
                          transition-all duration-300 tracking-wider"
             >
-              BEGIN CHAKRA SCAN
+              BEGIN DIAGNOSTIC
             </button>
           </div>
         )}
@@ -1319,49 +1308,20 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
         {/* QUIZ PHASE */}
         {phase === 'quiz' && (
           <div className="animate-[fadeIn_0.5s_ease-out]">
-            {/* Progress indicator */}
-            <div className="flex justify-center gap-2 mb-6">
-              {chakraQuestions.map((q, i) => (
-                <div 
-                  key={q.chakra}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    i < currentQuestion 
-                      ? 'scale-100' 
-                      : i === currentQuestion 
-                        ? 'animate-pulse scale-110 ring-2 ring-offset-1 ring-offset-black' 
-                        : 'opacity-30'
-                  }`}
-                  style={{ 
-                    backgroundColor: i <= currentQuestion ? q.color : '#333',
-                    ringColor: i === currentQuestion ? q.color : 'transparent'
-                  }}
-                />
-              ))}
-            </div>
-            
-            <div className="text-center mb-2">
-              <div className="font-mono text-[#00ff41]/60 text-xs tracking-wider">
+            {/* Progress indicator - text based */}
+            <div className="text-center mb-6">
+              <div className="font-mono text-[#00ff41]/60 text-xs tracking-wider mb-2">
                 QUESTION {currentQuestion + 1} OF 7
+              </div>
+              <div className="font-mono text-white/40 text-xs">
+                [ {Array(7).fill('').map((_, i) => i <= currentQuestion ? '■' : '□').join(' ')} ]
               </div>
             </div>
             
-            {/* Current chakra indicator */}
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div 
-                className="w-4 h-4 rounded-full animate-pulse"
-                style={{ 
-                  backgroundColor: chakraQuestions[currentQuestion].color,
-                  boxShadow: `0 0 15px ${chakraQuestions[currentQuestion].color}`
-                }}
-              />
-              <span 
-                className="font-mono text-sm font-bold tracking-wider"
-                style={{ color: chakraQuestions[currentQuestion].color }}
-              >
+            {/* Current chakra indicator - text only */}
+            <div className="text-center mb-6">
+              <span className="font-mono text-sm font-bold tracking-wider text-[#00ff41]">
                 {chakraQuestions[currentQuestion].chakra} CHAKRA
-              </span>
-              <span className="font-mono text-white/40 text-xs">
-                ({chakraQuestions[currentQuestion].chakraName})
               </span>
             </div>
             
@@ -1378,8 +1338,7 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
                   {chakraQuestions[currentQuestion].symptoms.map((symptom, i) => (
                     <span 
                       key={i}
-                      className="font-mono text-xs px-2 py-1 bg-white/5 border border-white/10 rounded"
-                      style={{ color: chakraQuestions[currentQuestion].color + '99' }}
+                      className="font-mono text-xs px-2 py-1 bg-white/5 border border-white/10 rounded text-white/60"
                     >
                       {symptom}
                     </span>
@@ -1431,46 +1390,32 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
           </div>
         )}
         
-        {/* SCANNING PHASE */}
+        {/* SCANNING PHASE - Text-based processing, no visual animation */}
         {phase === 'scanning' && (
           <div className="text-center animate-[fadeIn_0.5s_ease-out]">
-            <div className="font-mono text-[#ff0040] text-xs tracking-[0.3em] mb-6 animate-pulse">
-              ⚡ ANALYZING ENERGY SIGNATURES ⚡
-            </div>
-            
-            <div className="mb-8">
-              <div className="font-mono text-[#00ff41] text-lg mb-4">
-                <GlitchText>SCANNING ALL 7 CHAKRAS...</GlitchText>
+            <div className="font-mono border border-[#00ff41]/30 bg-black/70 p-8 max-w-md mx-auto">
+              <div className="text-[#ff0040] text-xs tracking-[0.3em] mb-6">
+                ▼ PROCESSING ▼
               </div>
               
-              {/* Scan progress bar */}
-              <div className="w-full h-2 bg-[#00ff41]/20 rounded overflow-hidden mb-4">
-                <div 
-                  className="h-full bg-gradient-to-r from-[#e53e3e] via-[#48bb78] to-[#9f7aea] transition-all duration-100"
-                  style={{ width: `${scanProgress}%` }}
-                />
-              </div>
-              
-              <div className="font-mono text-[#00ff41]/60 text-sm">
-                {scanProgress}% COMPLETE
-              </div>
-            </div>
-            
-            {/* Scanning animation - chakra cascade */}
-            <div className="flex justify-center gap-3">
-              {chakraQuestions.map((q, i) => (
-                <div 
-                  key={q.chakra}
-                  className="font-mono text-lg animate-pulse"
-                  style={{ 
-                    color: q.color,
-                    animationDelay: `${i * 0.15}s`,
-                    textShadow: `0 0 10px ${q.color}`
-                  }}
-                >
-                  ◉
+              <div className="space-y-3 text-left mb-6">
+                <div className="font-mono text-[#00ff41]/80 text-sm">
+                  &gt; Analyzing energy signatures...
                 </div>
-              ))}
+                <div className="font-mono text-[#00ff41]/70 text-sm animate-pulse">
+                  &gt; Compiling chakra data...
+                </div>
+                <div className="font-mono text-[#00ff41]/60 text-sm">
+                  &gt; Cross-referencing cosmic database...
+                </div>
+                <div className="font-mono text-white/50 text-sm">
+                  &gt; Generating diagnostic report...
+                </div>
+              </div>
+              
+              <div className="font-mono text-[#00ff41] text-xs tracking-wider animate-pulse">
+                PLEASE WAIT...
+              </div>
             </div>
           </div>
         )}
