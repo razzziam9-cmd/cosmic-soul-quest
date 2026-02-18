@@ -56,28 +56,10 @@ const playGlitchSound = () => {
   } catch {}
 };
 
-// Keystroke sound
+// Keystroke sound - DISABLED (per user request)
 const playKeystrokeSound = () => {
-  if (isMuted) return;
-  try {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-    
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.frequency.setValueAtTime(1800 + Math.random() * 400, now);
-    osc.type = 'square';
-    
-    gain.gain.setValueAtTime(0.02, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-    
-    osc.start(now);
-    osc.stop(now + 0.02);
-  } catch {}
+  // Typing sounds removed - only ambient background sounds remain
+  return;
 };
 
 // Transition whoosh
@@ -1134,62 +1116,71 @@ const getChakraStatus = (score: number): ChakraResult['status'] => {
   return 'blocked';
 };
 
-// Chakra body diagram component
-const ChakraDiagram = ({ results }: { results: ChakraResult[] }) => {
-  // Map chakras to their positions on the body (bottom to top)
-  const chakraPositions = [
-    { chakra: 'ROOT', y: 85 },
-    { chakra: 'SACRAL', y: 72 },
-    { chakra: 'SOLAR PLEXUS', y: 58 },
-    { chakra: 'HEART', y: 44 },
-    { chakra: 'THROAT', y: 30 },
-    { chakra: 'THIRD EYE', y: 18 },
-    { chakra: 'CROWN', y: 6 },
-  ];
-
+// Chakra text results component - simple list format
+const ChakraTextResults = ({ results }: { results: ChakraResult[] }) => {
+  const getStatusText = (status: ChakraResult['status']) => {
+    switch (status) {
+      case 'balanced': return 'BALANCED';
+      case 'slightly-unbalanced': return 'SLIGHTLY UNBALANCED';
+      case 'unbalanced': return 'UNBALANCED';
+      case 'blocked': return 'BLOCKED';
+    }
+  };
+  
+  const getRecommendation = (chakra: string, status: ChakraResult['status']) => {
+    if (status === 'balanced') return 'Energy flowing harmoniously';
+    
+    const recommendations: Record<string, string> = {
+      'ROOT': 'You need grounding work - connect with nature, walk barefoot, meditate on stability',
+      'SACRAL': 'Creative expression needed - engage in art, movement, emotional release work',
+      'SOLAR PLEXUS': 'Personal power restoration required - set boundaries, practice self-affirmation',
+      'HEART': 'Heart healing necessary - practice self-love, forgiveness, compassion meditation',
+      'THROAT': 'Communication work needed - speak your truth, journaling, singing or chanting',
+      'THIRD EYE': 'Intuition development required - meditation, dream work, trust inner guidance',
+      'CROWN': 'Spiritual connection needed - meditation, prayer, connection to higher purpose'
+    };
+    return recommendations[chakra] || 'Energy realignment recommended';
+  };
+  
   return (
-    <div className="relative w-32 mx-auto">
-      {/* Human silhouette */}
-      <svg viewBox="0 0 100 160" className="w-full h-auto opacity-30">
-        {/* Simple body outline */}
-        <ellipse cx="50" cy="15" rx="12" ry="14" fill="#00ff41" opacity="0.3" />
-        <rect x="38" y="28" width="24" height="40" rx="8" fill="#00ff41" opacity="0.3" />
-        <rect x="42" y="68" width="7" height="50" rx="3" fill="#00ff41" opacity="0.3" />
-        <rect x="51" y="68" width="7" height="50" rx="3" fill="#00ff41" opacity="0.3" />
-        <rect x="20" y="32" width="20" height="6" rx="3" fill="#00ff41" opacity="0.3" />
-        <rect x="60" y="32" width="20" height="6" rx="3" fill="#00ff41" opacity="0.3" />
-      </svg>
-      
-      {/* Chakra points */}
-      <div className="absolute inset-0">
-        {chakraPositions.map((pos) => {
-          const result = results.find(r => r.chakra === pos.chakra);
-          const isBlocked = result && (result.status === 'blocked' || result.status === 'unbalanced');
-          const isBalanced = result?.status === 'balanced';
-          
-          return (
-            <div
-              key={pos.chakra}
-              className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
-              style={{ top: `${pos.y}%` }}
-            >
-              <div 
-                className={`w-5 h-5 rounded-full transition-all duration-500 ${
-                  isBlocked 
-                    ? 'animate-pulse shadow-[0_0_15px_currentColor]' 
-                    : isBalanced 
-                      ? 'shadow-[0_0_10px_currentColor]'
-                      : 'opacity-50'
-                }`}
-                style={{ 
-                  backgroundColor: isBlocked ? '#ff0040' : isBalanced ? result?.color : '#444',
-                  color: isBlocked ? '#ff0040' : result?.color || '#444'
-                }}
-              />
-            </div>
-          );
-        })}
+    <div className="space-y-4 max-w-xl mx-auto">
+      <div className="font-mono text-center text-[#00ff41]/60 text-xs tracking-wider mb-6 border-b border-[#00ff41]/20 pb-4">
+        ═══════ CHAKRA DIAGNOSTIC REPORT ═══════
       </div>
+      {results.map((result, index) => (
+        <div 
+          key={result.chakra}
+          className="font-mono animate-[fadeIn_0.5s_ease-out] border-l-4 pl-4 py-2"
+          style={{ 
+            animationDelay: `${index * 0.15}s`,
+            borderColor: result.status === 'blocked' ? '#ff0040' 
+              : result.status === 'unbalanced' ? '#ff6b35'
+              : result.status === 'slightly-unbalanced' ? '#eab308'
+              : '#00ff41'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span 
+              className="text-sm font-bold tracking-wider"
+              style={{ color: result.color }}
+            >
+              {result.chakra} CHAKRA
+            </span>
+            <span className="text-white/30 text-xs">({result.chakraName})</span>
+          </div>
+          <div className={`text-sm font-bold mb-1 ${
+            result.status === 'blocked' ? 'text-[#ff0040]'
+            : result.status === 'unbalanced' ? 'text-[#ff6b35]'
+            : result.status === 'slightly-unbalanced' ? 'text-yellow-500'
+            : 'text-[#00ff41]'
+          }`}>
+            STATUS: {getStatusText(result.status)}
+          </div>
+          <div className="text-white/50 text-xs leading-relaxed">
+            → {getRecommendation(result.chakra, result.status)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -1484,7 +1475,7 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
           </div>
         )}
         
-        {/* RESULT PHASE */}
+        {/* RESULT PHASE - Simple Text List Format */}
         {phase === 'result' && (
           <div className="animate-[fadeIn_0.8s_ease-out]">
             <div className="text-center mb-6">
@@ -1496,91 +1487,11 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
               </h2>
             </div>
             
-            {/* Chakra Diagram */}
-            <div className="flex flex-col md:flex-row gap-8 mb-8">
-              {/* Body diagram */}
-              <div className="flex-shrink-0">
-                <ChakraDiagram results={results} />
-                <div className="text-center mt-4">
-                  <div className="flex justify-center gap-4 text-xs font-mono">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded-full bg-[#00ff41]" />
-                      <span className="text-[#00ff41]/70">Balanced</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded-full bg-[#ff0040] animate-pulse" />
-                      <span className="text-[#ff0040]/70">Blocked</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Results list */}
-              <div className="flex-1 space-y-2">
-                {results.map((result, index) => (
-                  <div 
-                    key={result.chakra}
-                    className={`
-                      flex items-center gap-3 p-3 border rounded-lg animate-[fadeIn_0.3s_ease-out]
-                      ${result.status === 'blocked' || result.status === 'unbalanced'
-                        ? 'border-[#ff0040]/50 bg-[#ff0040]/10'
-                        : result.status === 'balanced'
-                          ? 'border-[#00ff41]/30 bg-[#00ff41]/5'
-                          : 'border-white/20 bg-white/5'
-                      }
-                    `}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    {/* Chakra indicator */}
-                    <div 
-                      className={`w-4 h-4 rounded-full flex-shrink-0 ${
-                        result.status === 'blocked' || result.status === 'unbalanced' ? 'animate-pulse' : ''
-                      }`}
-                      style={{ 
-                        backgroundColor: result.status === 'blocked' || result.status === 'unbalanced' 
-                          ? '#ff0040' 
-                          : result.color,
-                        boxShadow: `0 0 8px ${result.status === 'blocked' || result.status === 'unbalanced' ? '#ff0040' : result.color}60`
-                      }}
-                    />
-                    
-                    {/* Chakra name */}
-                    <div className="flex-1">
-                      <span 
-                        className="font-mono text-sm font-bold"
-                        style={{ color: result.color }}
-                      >
-                        {result.chakra}
-                      </span>
-                      <span className="font-mono text-white/40 text-xs ml-2">
-                        {result.chakraName}
-                      </span>
-                    </div>
-                    
-                    {/* Status badge */}
-                    <div className={`
-                      font-mono text-xs px-2 py-1 rounded
-                      ${result.status === 'blocked' 
-                        ? 'bg-[#ff0040]/30 text-[#ff0040]'
-                        : result.status === 'unbalanced'
-                          ? 'bg-[#ff0040]/20 text-[#ff0040]/80'
-                          : result.status === 'slightly-unbalanced'
-                            ? 'bg-yellow-500/20 text-yellow-500'
-                            : 'bg-[#00ff41]/20 text-[#00ff41]'
-                      }
-                    `}>
-                      {result.status === 'blocked' ? '⚠ BLOCKED' 
-                        : result.status === 'unbalanced' ? '⚡ UNBALANCED'
-                        : result.status === 'slightly-unbalanced' ? '~ MINOR'
-                        : '✓ BALANCED'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Simple Text Results List */}
+            <ChakraTextResults results={results} />
             
             {/* Summary */}
-            <div className="text-center border-t border-[#00ff41]/20 pt-6">
+            <div className="text-center border-t border-[#00ff41]/20 pt-6 mt-8">
               {blockedChakras.length > 0 ? (
                 <>
                   <p className="font-mono text-[#ff0040] text-sm mb-2">
