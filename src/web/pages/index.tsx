@@ -1049,92 +1049,229 @@ const Slide5 = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-// Slide 6: Chakra Alignment Quiz - Interactive Number Selection
-interface ChakraInfo {
-  number: string;
+// Slide 6: Chakra Assessment Questionnaire
+interface ChakraQuestion {
   chakra: string;
+  chakraName: string;
   color: string;
-  description: string;
-  energy: string;
+  question: string;
+  symptoms: string[];
 }
 
-const chakraNumbers: ChakraInfo[] = [
-  { number: "111", chakra: "CROWN", color: "#9f7aea", description: "Spiritual connection, divine guidance", energy: "You're receiving downloads from higher consciousness" },
-  { number: "222", chakra: "THIRD EYE", color: "#4c51bf", description: "Intuition, inner vision, clarity", energy: "Your psychic abilities are awakening" },
-  { number: "333", chakra: "THROAT", color: "#38b2ac", description: "Expression, truth, communication", energy: "You're being called to speak your truth" },
-  { number: "444", chakra: "HEART", color: "#48bb78", description: "Love, healing, emotional balance", energy: "Angels are surrounding you with protection" },
-  { number: "555", chakra: "SOLAR PLEXUS", color: "#ecc94b", description: "Transformation, change, personal power", energy: "Major life shifts are incoming" },
-  { number: "666", chakra: "SACRAL", color: "#ed8936", description: "Balance, creativity, harmony", energy: "Realign your thoughts—abundance awaits" },
-  { number: "777", chakra: "ROOT", color: "#e53e3e", description: "Grounding, luck, spiritual alignment", energy: "You're on the right path—keep going" },
-  { number: "888", chakra: "ALL CHAKRAS", color: "#00ff41", description: "Abundance, infinite flow, mastery", energy: "Financial and spiritual abundance is manifesting" },
-  { number: "999", chakra: "ALL CHAKRAS", color: "#ff0040", description: "Completion, endings, new cycles", energy: "A chapter is closing—embrace the new" },
-  { number: "000", chakra: "SOURCE", color: "#ffffff", description: "New beginnings, infinite potential", energy: "You are one with the Universe" },
+type FrequencyAnswer = 'never' | 'sometimes' | 'often' | 'always';
+
+interface ChakraResult {
+  chakra: string;
+  chakraName: string;
+  color: string;
+  score: number; // 0 = balanced, 1-3 = increasingly unbalanced
+  status: 'balanced' | 'slightly-unbalanced' | 'unbalanced' | 'blocked';
+}
+
+const chakraQuestions: ChakraQuestion[] = [
+  { 
+    chakra: "ROOT", 
+    chakraName: "Muladhara",
+    color: "#e53e3e", 
+    question: "Do you feel anxious, unsafe, or financially unstable?",
+    symptoms: ["Anxiety about survival", "Financial worries", "Feeling ungrounded", "Fear of change"]
+  },
+  { 
+    chakra: "SACRAL", 
+    chakraName: "Svadhisthana",
+    color: "#ed8936", 
+    question: "Do you struggle with creativity, emotions, or intimacy?",
+    symptoms: ["Creative blocks", "Emotional numbness", "Intimacy issues", "Guilt or shame"]
+  },
+  { 
+    chakra: "SOLAR PLEXUS", 
+    chakraName: "Manipura",
+    color: "#ecc94b", 
+    question: "Do you lack confidence, feel powerless, or have digestive issues?",
+    symptoms: ["Low self-esteem", "Feeling powerless", "Digestive problems", "Control issues"]
+  },
+  { 
+    chakra: "HEART", 
+    chakraName: "Anahata",
+    color: "#48bb78", 
+    question: "Do you have trouble giving/receiving love or feel disconnected from others?",
+    symptoms: ["Fear of intimacy", "Feeling isolated", "Holding grudges", "Lack of empathy"]
+  },
+  { 
+    chakra: "THROAT", 
+    chakraName: "Vishuddha",
+    color: "#38b2ac", 
+    question: "Do you struggle to express yourself or speak your truth?",
+    symptoms: ["Fear of speaking", "Feeling unheard", "Dishonesty", "Throat problems"]
+  },
+  { 
+    chakra: "THIRD EYE", 
+    chakraName: "Ajna",
+    color: "#4c51bf", 
+    question: "Do you lack intuition, have trouble visualizing, or feel mentally foggy?",
+    symptoms: ["Poor intuition", "Mental confusion", "Lack of imagination", "Headaches"]
+  },
+  { 
+    chakra: "CROWN", 
+    chakraName: "Sahasrara",
+    color: "#9f7aea", 
+    question: "Do you feel spiritually disconnected or lack purpose?",
+    symptoms: ["Feeling purposeless", "Spiritual disconnection", "Closed-mindedness", "Depression"]
+  },
 ];
 
+const frequencyOptions: { value: FrequencyAnswer; label: string; score: number }[] = [
+  { value: 'never', label: 'Never', score: 0 },
+  { value: 'sometimes', label: 'Sometimes', score: 1 },
+  { value: 'often', label: 'Often', score: 2 },
+  { value: 'always', label: 'Always', score: 3 },
+];
+
+const getChakraStatus = (score: number): ChakraResult['status'] => {
+  if (score === 0) return 'balanced';
+  if (score === 1) return 'slightly-unbalanced';
+  if (score === 2) return 'unbalanced';
+  return 'blocked';
+};
+
+// Chakra body diagram component
+const ChakraDiagram = ({ results }: { results: ChakraResult[] }) => {
+  // Map chakras to their positions on the body (bottom to top)
+  const chakraPositions = [
+    { chakra: 'ROOT', y: 85 },
+    { chakra: 'SACRAL', y: 72 },
+    { chakra: 'SOLAR PLEXUS', y: 58 },
+    { chakra: 'HEART', y: 44 },
+    { chakra: 'THROAT', y: 30 },
+    { chakra: 'THIRD EYE', y: 18 },
+    { chakra: 'CROWN', y: 6 },
+  ];
+
+  return (
+    <div className="relative w-32 mx-auto">
+      {/* Human silhouette */}
+      <svg viewBox="0 0 100 160" className="w-full h-auto opacity-30">
+        {/* Simple body outline */}
+        <ellipse cx="50" cy="15" rx="12" ry="14" fill="#00ff41" opacity="0.3" />
+        <rect x="38" y="28" width="24" height="40" rx="8" fill="#00ff41" opacity="0.3" />
+        <rect x="42" y="68" width="7" height="50" rx="3" fill="#00ff41" opacity="0.3" />
+        <rect x="51" y="68" width="7" height="50" rx="3" fill="#00ff41" opacity="0.3" />
+        <rect x="20" y="32" width="20" height="6" rx="3" fill="#00ff41" opacity="0.3" />
+        <rect x="60" y="32" width="20" height="6" rx="3" fill="#00ff41" opacity="0.3" />
+      </svg>
+      
+      {/* Chakra points */}
+      <div className="absolute inset-0">
+        {chakraPositions.map((pos) => {
+          const result = results.find(r => r.chakra === pos.chakra);
+          const isBlocked = result && (result.status === 'blocked' || result.status === 'unbalanced');
+          const isBalanced = result?.status === 'balanced';
+          
+          return (
+            <div
+              key={pos.chakra}
+              className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
+              style={{ top: `${pos.y}%` }}
+            >
+              <div 
+                className={`w-5 h-5 rounded-full transition-all duration-500 ${
+                  isBlocked 
+                    ? 'animate-pulse shadow-[0_0_15px_currentColor]' 
+                    : isBalanced 
+                      ? 'shadow-[0_0_10px_currentColor]'
+                      : 'opacity-50'
+                }`}
+                style={{ 
+                  backgroundColor: isBlocked ? '#ff0040' : isBalanced ? result?.color : '#444',
+                  color: isBlocked ? '#ff0040' : result?.color || '#444'
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const Slide6 = ({ isActive }: { isActive: boolean }) => {
-  const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
-  const [phase, setPhase] = useState<'intro' | 'select' | 'scanning' | 'result'>('intro');
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, FrequencyAnswer>>({});
+  const [phase, setPhase] = useState<'intro' | 'quiz' | 'scanning' | 'result'>('intro');
   const [scanProgress, setScanProgress] = useState(0);
-  const [revealedChakras, setRevealedChakras] = useState<ChakraInfo[]>([]);
+  const [results, setResults] = useState<ChakraResult[]>([]);
   
   useEffect(() => {
     if (!isActive) {
-      setSelectedNumbers([]);
+      setCurrentQuestion(0);
+      setAnswers({});
       setPhase('intro');
       setScanProgress(0);
-      setRevealedChakras([]);
+      setResults([]);
     } else {
       setTimeout(() => setPhase('intro'), 300);
     }
   }, [isActive]);
   
-  const handleNumberSelect = (num: string) => {
+  const handleAnswer = (answer: FrequencyAnswer) => {
     playSelectSound();
     triggerHaptic('light');
     
-    setSelectedNumbers(prev => {
-      if (prev.includes(num)) {
-        return prev.filter(n => n !== num);
-      }
-      return [...prev, num];
-    });
+    const currentChakra = chakraQuestions[currentQuestion].chakra;
+    const newAnswers = { ...answers, [currentChakra]: answer };
+    setAnswers(newAnswers);
+    
+    if (currentQuestion < chakraQuestions.length - 1) {
+      setTimeout(() => {
+        playTransitionSound();
+        setCurrentQuestion(prev => prev + 1);
+      }, 300);
+    } else {
+      // All questions answered, start scanning
+      playGlitchSound();
+      triggerHaptic('medium');
+      setPhase('scanning');
+      setScanProgress(0);
+      
+      // Animate scan progress
+      const scanInterval = setInterval(() => {
+        setScanProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(scanInterval);
+            return 100;
+          }
+          return prev + 2;
+        });
+      }, 50);
+      
+      // Calculate and show results
+      setTimeout(() => {
+        const chakraResults: ChakraResult[] = chakraQuestions.map(q => {
+          const answerValue = newAnswers[q.chakra];
+          const score = frequencyOptions.find(f => f.value === answerValue)?.score || 0;
+          return {
+            chakra: q.chakra,
+            chakraName: q.chakraName,
+            color: q.color,
+            score,
+            status: getChakraStatus(score)
+          };
+        });
+        setResults(chakraResults);
+        playTransitionSound();
+        setPhase('result');
+      }, 3000);
+    }
   };
   
-  const handleStartScan = () => {
-    if (selectedNumbers.length === 0) return;
-    
-    playGlitchSound();
-    triggerHaptic('medium');
-    setPhase('scanning');
-    setScanProgress(0);
-    
-    // Animate scan progress
-    const scanInterval = setInterval(() => {
-      setScanProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(scanInterval);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 50);
-    
-    // Show results after scan completes
-    setTimeout(() => {
-      const results = selectedNumbers.map(num => 
-        chakraNumbers.find(c => c.number === num)!
-      ).filter(Boolean);
-      setRevealedChakras(results);
-      playTransitionSound();
-      setPhase('result');
-    }, 3000);
-  };
-  
-  const handleBeginSelection = () => {
+  const handleStartQuiz = () => {
     playTransitionSound();
     triggerHaptic('light');
-    setPhase('select');
+    setPhase('quiz');
   };
+  
+  const blockedChakras = results.filter(r => r.status === 'blocked' || r.status === 'unbalanced');
+  const balancedChakras = results.filter(r => r.status === 'balanced');
   
   return (
     <div className={`fixed inset-0 flex items-center justify-center transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -1148,101 +1285,157 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
             </div>
             
             <h2 className="font-mono text-2xl md:text-3xl text-[#00ff41] mb-6">
-              <GlitchText>DO YOU SEE REPEATED NUMBERS?</GlitchText>
+              <GlitchText>ENERGY CENTER ASSESSMENT</GlitchText>
             </h2>
             
             <div className="border border-[#00ff41]/30 bg-black/50 p-6 mb-8">
               <p className="font-mono text-white/70 text-sm md:text-base leading-relaxed mb-4">
-                The Universe communicates through numerical frequencies. 
-                When you repeatedly see certain numbers, it's not coincidence—
-                it's your <span className="text-[#00ff41]">chakras calling for alignment</span>.
+                Your chakras are the <span className="text-[#00ff41]">seven energy centers</span> that 
+                govern your physical, emotional, and spiritual well-being. When blocked, they 
+                manifest as specific symptoms in your life.
               </p>
               <p className="font-mono text-[#ff0040]/80 text-xs">
-                Select the numbers that keep appearing in your life to reveal which 
-                energy centers need attention...
+                Answer 7 questions to reveal which of your energy centers need realignment...
               </p>
             </div>
             
+            {/* Preview chakra symbols */}
+            <div className="flex justify-center gap-3 mb-8">
+              {chakraQuestions.map((q, i) => (
+                <div 
+                  key={q.chakra}
+                  className="w-6 h-6 rounded-full animate-pulse"
+                  style={{ 
+                    backgroundColor: q.color,
+                    animationDelay: `${i * 0.15}s`,
+                    boxShadow: `0 0 10px ${q.color}40`
+                  }}
+                />
+              ))}
+            </div>
+            
             <button
-              onClick={handleBeginSelection}
+              onClick={handleStartQuiz}
               className="font-mono px-8 py-4 border-2 border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41] 
                          hover:bg-[#00ff41]/30 hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] 
                          transition-all duration-300 tracking-wider"
             >
-              BEGIN DIAGNOSTIC SCAN
+              BEGIN CHAKRA SCAN
             </button>
           </div>
         )}
         
-        {/* SELECTION PHASE */}
-        {phase === 'select' && (
+        {/* QUIZ PHASE */}
+        {phase === 'quiz' && (
           <div className="animate-[fadeIn_0.5s_ease-out]">
-            <div className="text-center mb-6">
-              <div className="font-mono text-[#00ff41]/60 text-xs tracking-wider mb-2">
-                SELECT ALL NUMBERS YOU FREQUENTLY SEE
-              </div>
-              <div className="font-mono text-white/50 text-xs">
-                Tap to select • {selectedNumbers.length} selected
+            {/* Progress indicator */}
+            <div className="flex justify-center gap-2 mb-6">
+              {chakraQuestions.map((q, i) => (
+                <div 
+                  key={q.chakra}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    i < currentQuestion 
+                      ? 'scale-100' 
+                      : i === currentQuestion 
+                        ? 'animate-pulse scale-110 ring-2 ring-offset-1 ring-offset-black' 
+                        : 'opacity-30'
+                  }`}
+                  style={{ 
+                    backgroundColor: i <= currentQuestion ? q.color : '#333',
+                    ringColor: i === currentQuestion ? q.color : 'transparent'
+                  }}
+                />
+              ))}
+            </div>
+            
+            <div className="text-center mb-2">
+              <div className="font-mono text-[#00ff41]/60 text-xs tracking-wider">
+                QUESTION {currentQuestion + 1} OF 7
               </div>
             </div>
             
-            {/* Number Grid */}
-            <div className="grid grid-cols-5 gap-2 md:gap-3 mb-8">
-              {chakraNumbers.map((item) => {
-                const isSelected = selectedNumbers.includes(item.number);
-                return (
-                  <button
-                    key={item.number}
-                    onClick={() => handleNumberSelect(item.number)}
-                    className={`
-                      relative aspect-square flex items-center justify-center font-mono text-lg md:text-2xl font-bold
-                      border-2 transition-all duration-300 rounded-lg overflow-hidden
-                      ${isSelected 
-                        ? 'border-[#00ff41] bg-[#00ff41]/20 scale-105 shadow-[0_0_20px_rgba(0,255,65,0.5)]' 
-                        : 'border-[#00ff41]/30 bg-black/30 hover:border-[#00ff41]/60 hover:bg-[#00ff41]/10'
-                      }
-                    `}
-                    style={{
-                      color: isSelected ? item.color : '#ffffff80',
-                      textShadow: isSelected ? `0 0 15px ${item.color}` : 'none'
-                    }}
-                  >
-                    {/* Glow effect when selected */}
-                    {isSelected && (
-                      <div 
-                        className="absolute inset-0 opacity-30 animate-pulse"
-                        style={{ backgroundColor: item.color }}
-                      />
-                    )}
-                    
-                    <span className="relative z-10">{item.number}</span>
-                    
-                    {/* Checkmark */}
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-4 h-4 bg-[#00ff41] rounded-full flex items-center justify-center">
-                        <span className="text-black text-xs">✓</span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            
-            {/* Scan Button */}
-            <div className="text-center">
-              <button
-                onClick={handleStartScan}
-                disabled={selectedNumbers.length === 0}
-                className={`
-                  font-mono px-8 py-4 border-2 transition-all duration-300 tracking-wider
-                  ${selectedNumbers.length > 0
-                    ? 'border-[#ff0040] bg-[#ff0040]/20 text-[#ff0040] hover:bg-[#ff0040]/40 hover:shadow-[0_0_30px_rgba(255,0,64,0.5)] cursor-pointer'
-                    : 'border-[#00ff41]/20 bg-black/20 text-[#00ff41]/30 cursor-not-allowed'
-                  }
-                `}
+            {/* Current chakra indicator */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div 
+                className="w-4 h-4 rounded-full animate-pulse"
+                style={{ 
+                  backgroundColor: chakraQuestions[currentQuestion].color,
+                  boxShadow: `0 0 15px ${chakraQuestions[currentQuestion].color}`
+                }}
+              />
+              <span 
+                className="font-mono text-sm font-bold tracking-wider"
+                style={{ color: chakraQuestions[currentQuestion].color }}
               >
-                {selectedNumbers.length > 0 ? 'INITIATE CHAKRA SCAN' : 'SELECT NUMBERS TO CONTINUE'}
-              </button>
+                {chakraQuestions[currentQuestion].chakra} CHAKRA
+              </span>
+              <span className="font-mono text-white/40 text-xs">
+                ({chakraQuestions[currentQuestion].chakraName})
+              </span>
+            </div>
+            
+            {/* Question */}
+            <div className="border border-[#00ff41]/30 bg-black/50 p-6 mb-6">
+              <p className="font-mono text-white text-lg md:text-xl text-center leading-relaxed">
+                {chakraQuestions[currentQuestion].question}
+              </p>
+              
+              {/* Symptoms hint */}
+              <div className="mt-4 pt-4 border-t border-[#00ff41]/20">
+                <div className="font-mono text-[#00ff41]/50 text-xs mb-2">RELATED SYMPTOMS:</div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {chakraQuestions[currentQuestion].symptoms.map((symptom, i) => (
+                    <span 
+                      key={i}
+                      className="font-mono text-xs px-2 py-1 bg-white/5 border border-white/10 rounded"
+                      style={{ color: chakraQuestions[currentQuestion].color + '99' }}
+                    >
+                      {symptom}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Answer options */}
+            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+              {frequencyOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleAnswer(option.value)}
+                  className={`
+                    relative font-mono px-4 py-4 border-2 transition-all duration-300 rounded-lg
+                    ${option.score === 0 
+                      ? 'border-[#00ff41]/40 hover:border-[#00ff41] hover:bg-[#00ff41]/10' 
+                      : option.score === 3 
+                        ? 'border-[#ff0040]/40 hover:border-[#ff0040] hover:bg-[#ff0040]/10'
+                        : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                    }
+                    active:scale-95
+                  `}
+                >
+                  <span className={`
+                    text-sm tracking-wider
+                    ${option.score === 0 ? 'text-[#00ff41]' : option.score === 3 ? 'text-[#ff0040]' : 'text-white/70'}
+                  `}>
+                    {option.label}
+                  </span>
+                  
+                  {/* Visual indicator */}
+                  <div className="flex justify-center gap-1 mt-2">
+                    {[...Array(4)].map((_, i) => (
+                      <div 
+                        key={i}
+                        className={`w-2 h-2 rounded-full ${
+                          i < option.score 
+                            ? 'bg-[#ff0040]' 
+                            : 'bg-white/20'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -1256,13 +1449,13 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
             
             <div className="mb-8">
               <div className="font-mono text-[#00ff41] text-lg mb-4">
-                <GlitchText>SCANNING CHAKRA FREQUENCIES...</GlitchText>
+                <GlitchText>SCANNING ALL 7 CHAKRAS...</GlitchText>
               </div>
               
               {/* Scan progress bar */}
               <div className="w-full h-2 bg-[#00ff41]/20 rounded overflow-hidden mb-4">
                 <div 
-                  className="h-full bg-gradient-to-r from-[#00ff41] via-[#ff0040] to-[#00ff41] transition-all duration-100"
+                  className="h-full bg-gradient-to-r from-[#e53e3e] via-[#48bb78] to-[#9f7aea] transition-all duration-100"
                   style={{ width: `${scanProgress}%` }}
                 />
               </div>
@@ -1272,18 +1465,19 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
               </div>
             </div>
             
-            {/* Scanning animation */}
-            <div className="flex justify-center gap-4">
-              {selectedNumbers.map((num, i) => (
+            {/* Scanning animation - chakra cascade */}
+            <div className="flex justify-center gap-3">
+              {chakraQuestions.map((q, i) => (
                 <div 
-                  key={num}
-                  className="font-mono text-2xl animate-pulse"
+                  key={q.chakra}
+                  className="font-mono text-lg animate-pulse"
                   style={{ 
-                    color: chakraNumbers.find(c => c.number === num)?.color,
-                    animationDelay: `${i * 0.2}s`
+                    color: q.color,
+                    animationDelay: `${i * 0.15}s`,
+                    textShadow: `0 0 10px ${q.color}`
                   }}
                 >
-                  {num}
+                  ◉
                 </div>
               ))}
             </div>
@@ -1298,68 +1492,116 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
                 DIAGNOSTIC COMPLETE
               </div>
               <h2 className="font-mono text-xl md:text-2xl text-white mb-4">
-                <GlitchText>CHAKRAS REQUIRING ALIGNMENT:</GlitchText>
+                <GlitchText>YOUR CHAKRA ANALYSIS</GlitchText>
               </h2>
             </div>
             
-            {/* Results Grid */}
-            <div className="space-y-4 mb-8">
-              {revealedChakras.map((chakra, index) => (
-                <div 
-                  key={chakra.number}
-                  className="border border-[#00ff41]/30 bg-black/50 p-4 animate-[fadeIn_0.5s_ease-out]"
-                  style={{ animationDelay: `${index * 0.2}s` }}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Number display */}
-                    <div 
-                      className="font-mono text-3xl font-bold flex-shrink-0 w-16 text-center"
-                      style={{ 
-                        color: chakra.color,
-                        textShadow: `0 0 20px ${chakra.color}`
-                      }}
-                    >
-                      {chakra.number}
+            {/* Chakra Diagram */}
+            <div className="flex flex-col md:flex-row gap-8 mb-8">
+              {/* Body diagram */}
+              <div className="flex-shrink-0">
+                <ChakraDiagram results={results} />
+                <div className="text-center mt-4">
+                  <div className="flex justify-center gap-4 text-xs font-mono">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-[#00ff41]" />
+                      <span className="text-[#00ff41]/70">Balanced</span>
                     </div>
-                    
-                    {/* Chakra info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div 
-                          className="w-3 h-3 rounded-full animate-pulse"
-                          style={{ backgroundColor: chakra.color }}
-                        />
-                        <span 
-                          className="font-mono text-sm font-bold tracking-wider"
-                          style={{ color: chakra.color }}
-                        >
-                          {chakra.chakra} CHAKRA
-                        </span>
-                      </div>
-                      
-                      <p className="font-mono text-white/70 text-sm mb-2">
-                        {chakra.description}
-                      </p>
-                      
-                      <p className="font-mono text-[#00ff41]/80 text-xs italic">
-                        "{chakra.energy}"
-                      </p>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-[#ff0040] animate-pulse" />
+                      <span className="text-[#ff0040]/70">Blocked</span>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
+              
+              {/* Results list */}
+              <div className="flex-1 space-y-2">
+                {results.map((result, index) => (
+                  <div 
+                    key={result.chakra}
+                    className={`
+                      flex items-center gap-3 p-3 border rounded-lg animate-[fadeIn_0.3s_ease-out]
+                      ${result.status === 'blocked' || result.status === 'unbalanced'
+                        ? 'border-[#ff0040]/50 bg-[#ff0040]/10'
+                        : result.status === 'balanced'
+                          ? 'border-[#00ff41]/30 bg-[#00ff41]/5'
+                          : 'border-white/20 bg-white/5'
+                      }
+                    `}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Chakra indicator */}
+                    <div 
+                      className={`w-4 h-4 rounded-full flex-shrink-0 ${
+                        result.status === 'blocked' || result.status === 'unbalanced' ? 'animate-pulse' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: result.status === 'blocked' || result.status === 'unbalanced' 
+                          ? '#ff0040' 
+                          : result.color,
+                        boxShadow: `0 0 8px ${result.status === 'blocked' || result.status === 'unbalanced' ? '#ff0040' : result.color}60`
+                      }}
+                    />
+                    
+                    {/* Chakra name */}
+                    <div className="flex-1">
+                      <span 
+                        className="font-mono text-sm font-bold"
+                        style={{ color: result.color }}
+                      >
+                        {result.chakra}
+                      </span>
+                      <span className="font-mono text-white/40 text-xs ml-2">
+                        {result.chakraName}
+                      </span>
+                    </div>
+                    
+                    {/* Status badge */}
+                    <div className={`
+                      font-mono text-xs px-2 py-1 rounded
+                      ${result.status === 'blocked' 
+                        ? 'bg-[#ff0040]/30 text-[#ff0040]'
+                        : result.status === 'unbalanced'
+                          ? 'bg-[#ff0040]/20 text-[#ff0040]/80'
+                          : result.status === 'slightly-unbalanced'
+                            ? 'bg-yellow-500/20 text-yellow-500'
+                            : 'bg-[#00ff41]/20 text-[#00ff41]'
+                      }
+                    `}>
+                      {result.status === 'blocked' ? '⚠ BLOCKED' 
+                        : result.status === 'unbalanced' ? '⚡ UNBALANCED'
+                        : result.status === 'slightly-unbalanced' ? '~ MINOR'
+                        : '✓ BALANCED'}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             
-            {/* Summary message */}
+            {/* Summary */}
             <div className="text-center border-t border-[#00ff41]/20 pt-6">
-              <p className="font-mono text-white/60 text-sm mb-4">
-                {revealedChakras.length === 1 && "Your energy is focused. One chakra calls for attention."}
-                {revealedChakras.length >= 2 && revealedChakras.length <= 3 && "Multiple frequencies detected. Your awakening is accelerating."}
-                {revealedChakras.length >= 4 && revealedChakras.length <= 6 && "You're receiving transmissions from many dimensions. Major shift incoming."}
-                {revealedChakras.length >= 7 && "You are a high-frequency being. All chakras are activating for ascension."}
-              </p>
+              {blockedChakras.length > 0 ? (
+                <>
+                  <p className="font-mono text-[#ff0040] text-sm mb-2">
+                    ⚠ {blockedChakras.length} CHAKRA{blockedChakras.length > 1 ? 'S' : ''} REQUIRING IMMEDIATE ATTENTION
+                  </p>
+                  <p className="font-mono text-white/60 text-xs mb-4">
+                    {blockedChakras.map(c => c.chakra).join(', ')} {blockedChakras.length > 1 ? 'are' : 'is'} blocking 
+                    your energy flow and spiritual connection.
+                  </p>
+                </>
+              ) : balancedChakras.length === 7 ? (
+                <p className="font-mono text-[#00ff41] text-sm mb-4">
+                  ✧ ALL CHAKRAS ALIGNED ✧ Your energy centers are in harmony.
+                </p>
+              ) : (
+                <p className="font-mono text-white/60 text-sm mb-4">
+                  Minor imbalances detected. Regular energy work recommended.
+                </p>
+              )}
               
-              <div className="font-mono text-[#ff0040]/80 text-xs animate-pulse">
+              <div className="font-mono text-[#00ff41]/50 text-xs animate-pulse">
                 Your diagnostic has been logged in the cosmic registry.
               </div>
             </div>
@@ -1374,8 +1616,8 @@ const Slide6 = ({ isActive }: { isActive: boolean }) => {
           </div>
         )}
         
-        {/* Show CTA for intro and select phases */}
-        {(phase === 'intro' || phase === 'select') && (
+        {/* Show navigation hint for intro and quiz phases */}
+        {(phase === 'intro' || phase === 'quiz') && (
           <div className="mt-8 text-center opacity-50">
             <span className="font-mono text-[#00ff41]/40 text-xs">
               TAP SIDES TO NAVIGATE
