@@ -56,11 +56,7 @@ const playGlitchSound = () => {
   } catch {}
 };
 
-// Keystroke sound - DISABLED (per user request)
-const playKeystrokeSound = () => {
-  // Typing sounds removed - only ambient background sounds remain
-  return;
-};
+
 
 // Transition whoosh
 const playTransitionSound = () => {
@@ -341,7 +337,6 @@ const TypewriterText = ({
     const interval = setInterval(() => {
       if (index < text.length) {
         setDisplayText(text.slice(0, index + 1));
-        playKeystrokeSound();
         index++;
       } else {
         clearInterval(interval);
@@ -1128,16 +1123,16 @@ const ChakraTextResults = ({ results }: { results: ChakraResult[] }) => {
   };
   
   const getRecommendation = (chakra: string, status: ChakraResult['status']) => {
-    if (status === 'balanced') return 'Your energy flows freely in this center.';
+    if (status === 'balanced') return 'Energy flows freely. No action required.';
     
     const recommendations: Record<string, string> = {
-      'ROOT': 'You need grounding work - connect with nature and meditate on stability.',
-      'SACRAL': 'Creative expression needed - engage in art, movement, emotional release.',
-      'SOLAR PLEXUS': 'Personal power restoration required - set boundaries, practice self-affirmation.',
-      'HEART': 'Heart healing necessary - practice self-love, forgiveness, compassion.',
-      'THROAT': 'Communication work needed - speak your truth, practice journaling.',
-      'THIRD EYE': 'Intuition development required - meditation, dream work, trust inner guidance.',
-      'CROWN': 'Spiritual connection needed - meditation, prayer, connection to higher purpose.'
+      'ROOT': 'Grounding exercises needed.',
+      'SACRAL': 'Creative expression required.',
+      'SOLAR PLEXUS': 'Personal power restoration needed.',
+      'HEART': 'Heart healing exercises recommended.',
+      'THROAT': 'Communication work required.',
+      'THIRD EYE': 'Intuition development needed.',
+      'CROWN': 'Spiritual connection exercises required.'
     };
     return recommendations[chakra] || 'Energy realignment recommended.';
   };
@@ -1151,30 +1146,28 @@ const ChakraTextResults = ({ results }: { results: ChakraResult[] }) => {
         <div className="text-white/30 text-xs mt-1">SUBJECT: COSMIC WARRIOR CANDIDATE</div>
       </div>
       
-      {/* Results List - Pure Text */}
-      <div className="space-y-4">
+      {/* Results List - Text Line Items Only */}
+      <div className="space-y-3">
         {results.map((result, index) => (
           <div 
             key={result.chakra}
-            className="animate-[fadeIn_0.3s_ease-out] pb-3 border-b border-white/10 last:border-b-0"
+            className="animate-[fadeIn_0.3s_ease-out] font-mono text-xs leading-relaxed"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-white/90 text-sm tracking-wider">
-                {result.chakra} CHAKRA
-              </span>
-              <span className={`text-xs font-bold tracking-wider ${
-                result.status === 'blocked' ? 'text-[#ff0040]'
-                : result.status === 'unbalanced' ? 'text-[#ff6b35]'
-                : result.status === 'slightly-unbalanced' ? 'text-yellow-500'
-                : 'text-[#00ff41]'
-              }`}>
-                [{getStatusText(result.status)}]
-              </span>
-            </div>
-            <div className="text-white/50 text-xs leading-relaxed pl-2">
-              {getRecommendation(result.chakra, result.status)}
-            </div>
+            <span className="text-white/90">{result.chakra} CHAKRA</span>
+            <span className="text-white/50"> - </span>
+            <span className="text-white/70">STATUS: </span>
+            <span className={`font-bold ${
+              result.status === 'blocked' ? 'text-[#ff0040]'
+              : result.status === 'unbalanced' ? 'text-[#ff6b35]'
+              : result.status === 'slightly-unbalanced' ? 'text-yellow-500'
+              : 'text-[#00ff41]'
+            }`}>
+              {getStatusText(result.status)}
+            </span>
+            <span className="text-white/50"> - </span>
+            <span className="text-white/70">RECOMMENDATION: </span>
+            <span className="text-white/60">{getRecommendation(result.chakra, result.status)}</span>
           </div>
         ))}
       </div>
